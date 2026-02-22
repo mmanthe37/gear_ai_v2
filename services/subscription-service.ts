@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { UNLIMITED_VEHICLES } from './constants';
 
 export type SubscriptionTier = 'free' | 'pro' | 'mechanic' | 'dealer';
 
@@ -55,7 +56,7 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     },
   },
   mechanic: {
-    maxVehicles: 999999, // unlimited
+    maxVehicles: UNLIMITED_VEHICLES,
     features: {
       ocrVinScan: true,
       ragManualChat: true,
@@ -68,7 +69,7 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     },
   },
   dealer: {
-    maxVehicles: 999999, // unlimited
+    maxVehicles: UNLIMITED_VEHICLES,
     features: {
       ocrVinScan: true,
       ragManualChat: true,

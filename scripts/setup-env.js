@@ -165,7 +165,7 @@ Quick Start:
      node scripts/setup-env.js
 
 For more information, see:
-  - docs/QUICK_START.md
+  - SETUP_GUIDE.md
   - DEPLOYMENT_READY.md
 `);
 }

@@ -4,6 +4,17 @@
  * Central export point for all service modules.
  */
 
+// Constants
+export {
+  UNLIMITED_VEHICLES,
+  MAX_FILE_SIZE_BYTES,
+  DEFAULT_API_TIMEOUT,
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  SUBSCRIPTION_TIERS,
+  SUBSCRIPTION_STATUSES,
+} from './constants';
+
 // Authentication & User Management
 export {
   syncUserToSupabase,

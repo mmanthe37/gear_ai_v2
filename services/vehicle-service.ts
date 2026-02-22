@@ -6,6 +6,7 @@
 
 import { supabase } from '../lib/supabase';
 import { Vehicle, VehicleFormData } from '../types/vehicle';
+import { UNLIMITED_VEHICLES } from './constants';
 
 /**
  * Create a new vehicle for a user
@@ -315,8 +316,8 @@ export async function canAddVehicle(userId: string): Promise<{
     const tierLimits: Record<string, number> = {
       free: 1,
       pro: 3,
-      mechanic: 999999, // unlimited
-      dealer: 999999, // unlimited
+      mechanic: UNLIMITED_VEHICLES,
+      dealer: UNLIMITED_VEHICLES,
     };
 
     const maxAllowed = tierLimits[tier] || 1;

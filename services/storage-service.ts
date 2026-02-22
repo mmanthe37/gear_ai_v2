@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { MAX_FILE_SIZE_BYTES } from './constants';
 
 /**
  * Storage bucket names
@@ -259,7 +260,7 @@ export async function initializeStorageBuckets(): Promise<void> {
         // Create bucket
         const { error } = await supabase.storage.createBucket(bucket.name, {
           public: bucket.public,
-          fileSizeLimit: 52428800, // 50MB
+          fileSizeLimit: MAX_FILE_SIZE_BYTES,
         });
 
         if (error) {

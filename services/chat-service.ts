@@ -382,7 +382,9 @@ export async function deleteChatMessage(
       throw new Error(`Failed to delete chat message: ${error.message}`);
     }
 
-    // Update message count
+    // Update message count in chat session
+    // Note: This requires a Supabase RPC function 'decrement_message_count'
+    // to be created in the database. See supabase/migrations for implementation.
     await supabase.rpc('decrement_message_count', {
       p_session_id: (message as any).session_id,
     });
