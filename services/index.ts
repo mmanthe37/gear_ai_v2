@@ -4,6 +4,22 @@
  * Central export point for all service modules.
  */
 
+// Authentication & User Management
+export {
+  syncUserToSupabase,
+  signUp,
+  signIn,
+  signOut,
+  getUserByFirebaseUid,
+  sendPasswordResetEmail,
+  updateUserProfile,
+  updateUserPreferences,
+  deleteUserAccount,
+  sendEmailVerification,
+  isEmailVerified,
+  reloadUser,
+} from './auth-service';
+
 // VIN decoding (NHTSA vPIC)
 export {
   decodeVIN,
@@ -120,3 +136,25 @@ export {
   getUserTokenUsage,
   generateSessionTitle,
 } from './chat-service';
+
+// Subscription & Tier Management
+export {
+  TIER_LIMITS,
+  getUserSubscription,
+  getUserTierLimits,
+  hasFeatureAccess,
+  updateSubscriptionTier,
+  setStripeCustomerId,
+  cancelSubscription,
+  reactivateSubscription,
+  isSubscriptionActive,
+  getSubscriptionPrice,
+  createCheckoutSession,
+  handleStripeWebhook,
+} from './subscription-service';
+
+export type {
+  SubscriptionTier,
+  SubscriptionStatus,
+  TierLimits,
+} from './subscription-service';
