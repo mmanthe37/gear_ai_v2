@@ -9,7 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "build": "npx expo export --platform web"
+    "build": "npx expo export --platform web",
+    "setup": "node scripts/setup-env.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
