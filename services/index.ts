@@ -57,3 +57,66 @@ export {
   getHealthStatus,
   validateEnvironment,
 } from './health-check';
+
+// Vehicle management
+export {
+  createVehicle,
+  getUserVehicles,
+  getVehicleById,
+  updateVehicle,
+  updateVehicleMileage,
+  updateVehicleImage,
+  deleteVehicle,
+  hardDeleteVehicle,
+  getUserVehicleCount,
+  canAddVehicle,
+  searchVehicleByVIN,
+} from './vehicle-service';
+
+// Maintenance tracking
+export {
+  createMaintenanceRecord,
+  getMaintenanceRecords,
+  getMaintenanceRecordById,
+  updateMaintenanceRecord,
+  deleteMaintenanceRecord,
+  getMaintenanceStats,
+  getAllUserMaintenanceRecords,
+  getRecentMaintenanceRecords,
+  addMaintenanceAttachment,
+  removeMaintenanceAttachment,
+} from './maintenance-service';
+
+// Storage management
+export {
+  STORAGE_BUCKETS,
+  uploadFile,
+  uploadVehiclePhoto,
+  uploadMaintenanceReceipt,
+  uploadProfileAvatar,
+  deleteFile,
+  deleteVehiclePhoto,
+  deleteMaintenanceReceipt,
+  getPublicUrl,
+  listFiles,
+  getVehiclePhotos,
+  getMaintenanceReceipts,
+  initializeStorageBuckets,
+} from './storage-service';
+
+// Chat session and message management
+export {
+  createChatSession,
+  getChatSession,
+  getUserChatSessions,
+  getVehicleChatSessions,
+  updateChatSessionTitle,
+  archiveChatSession,
+  deleteChatSession,
+  addChatMessage,
+  getChatMessages,
+  getRecentChatMessages,
+  deleteChatMessage,
+  getUserTokenUsage,
+  generateSessionTitle,
+} from './chat-service';
