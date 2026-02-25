@@ -19,6 +19,7 @@ import { getUserVehicles } from '../../services/vehicle-service';
 import { colors, radii, shell } from '../../theme/tokens';
 import { fontFamilies, typeScale } from '../../theme/typography';
 import GearLogo from '../branding/GearLogo';
+import GearActionIcon from '../branding/GearActionIcon';
 import AppSidebar from './AppSidebar';
 import AppTopNav from './AppTopNav';
 
@@ -35,6 +36,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
   const { user, loading } = useAuth();
   const {
     isDesktop,
+    isMobile,
     isSidebarCollapsed,
     isMobileSidebarOpen,
     toggleSidebarCollapsed,
@@ -97,10 +99,12 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
     () => (isSidebarCollapsed ? shell.sidebarCollapsed : shell.sidebarExpanded),
     [isSidebarCollapsed]
   );
+  const showHeaderWordmark = isDesktop || width >= 860;
 
   if (loading) {
     return (
       <View style={styles.loadingState}>
+        <GearLogo variant="micro" size="lg" style={styles.loadingLogo} />
         <ActivityIndicator color={colors.brandAccent} size="large" />
       </View>
     );
@@ -147,7 +151,12 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
           )}
 
           <View style={styles.headerTitleArea}>
-            <GearLogo variant="icon" size="md" showWordmark />
+            <GearLogo
+              variant={showHeaderWordmark ? 'icon' : 'micro'}
+              size={isMobile ? 'sm' : 'md'}
+              showWordmark={false}
+            />
+            {showHeaderWordmark && <GearLogo variant="wordmark" size="sm" />}
             <View style={styles.headerCopy}>
               <Text numberOfLines={1} style={styles.pageTitle}>
                 {title}
@@ -168,7 +177,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
               pressed && styles.buttonInteraction,
             ]}
           >
-            <Ionicons name="person-circle-outline" size={20} color={colors.actionAccent} />
+            <GearActionIcon size="md" />
             <Text style={styles.accountButtonLabel} numberOfLines={1}>
               {user.display_name || 'Account'}
             </Text>
@@ -215,6 +224,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingLogo: {
+    marginBottom: 14,
+  },
   persistentSidebar: {
     borderRightWidth: 1,
     borderRightColor: colors.border,
@@ -248,7 +260,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   headerCopy: {
     flex: 1,
@@ -267,7 +279,7 @@ const styles = StyleSheet.create({
   },
   accountButton: {
     minHeight: 44,
-    maxWidth: 220,
+    maxWidth: 240,
     borderRadius: radii.full,
     borderWidth: 1,
     borderColor: colors.border,

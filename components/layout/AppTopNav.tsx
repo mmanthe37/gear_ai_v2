@@ -5,6 +5,7 @@ import { colors, radii } from '../../theme/tokens';
 import { fontFamilies, typeScale } from '../../theme/typography';
 import type { ShellRouteKey } from '../../types/shell';
 import { PRIMARY_NAV_ITEMS, getTopNavActiveKey } from './nav-config';
+import GearLogo from '../branding/GearLogo';
 
 interface AppTopNavProps {
   routeKey: ShellRouteKey;
@@ -16,6 +17,9 @@ export default function AppTopNav({ routeKey }: AppTopNavProps) {
   return (
     <View style={styles.container}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+        <View style={styles.brandBadge}>
+          <GearLogo variant="micro" size="md" />
+        </View>
         {PRIMARY_NAV_ITEMS.map((item) => {
           const active = item.key === activeKey;
           return (
@@ -51,6 +55,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     gap: 10,
+    alignItems: 'center',
+  },
+  brandBadge: {
+    minHeight: 38,
+    minWidth: 38,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   button: {
     minHeight: 44,

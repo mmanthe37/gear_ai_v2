@@ -13,7 +13,7 @@ export interface ChatSession {
   last_message_at: string;
   message_count: number;
   is_active: boolean;
-  context_type: 'general' | 'manual' | 'diagnostic' | 'maintenance' | 'valuation';
+  context_type: 'general' | 'manual' | 'diagnostic' | 'maintenance' | 'valuation' | 'cost_estimate' | 'parts_lookup' | 'pre_purchase';
   metadata?: Record<string, any>;
 }
 
@@ -46,6 +46,46 @@ export interface RAGSource {
   manual_name?: string; // e.g., "2023 Honda Accord Owner's Manual"
 }
 
+// ---------------------------------------------------------------------------
+// Multimodal support
+// ---------------------------------------------------------------------------
+
+export interface MultimodalAttachment {
+  type: 'image' | 'audio';
+  /** base64-encoded data URI (e.g., "data:image/jpeg;base64,...") */
+  data_uri: string;
+  /** Original filename or description */
+  label?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Rich vehicle context injected into every AI call (F1)
+// ---------------------------------------------------------------------------
+
+export interface VehicleFullContext {
+  vehicle_id: string;
+  year: number;
+  make: string;
+  model: string;
+  trim?: string;
+  vin?: string;
+  current_mileage?: number;
+  /** Recent maintenance records (last 10) */
+  recent_maintenance?: Array<{
+    title: string;
+    date: string;
+    mileage?: number;
+    cost?: number;
+    parts_replaced?: string[];
+  }>;
+  /** Active / pending DTC codes */
+  active_codes?: Array<{ code: string; description: string; severity: string }>;
+  /** Upcoming service reminders */
+  pending_services?: Array<{ title: string; due_mileage?: number; due_date?: string; priority: string }>;
+  /** 30-day mileage delta for proactive suggestions */
+  monthly_mileage_delta?: number;
+}
+
 export interface AIRequest {
   session_id: string;
   message: string;
@@ -54,6 +94,10 @@ export interface AIRequest {
   include_rag?: boolean;
   max_tokens?: number;
   temperature?: number;
+  /** Full vehicle context for enhanced AI responses (F1) */
+  vehicle_context?: VehicleFullContext;
+  /** Multimodal attachment for photo/audio analysis (F2) */
+  attachment?: MultimodalAttachment;
 }
 
 export interface AIResponse {
@@ -119,6 +163,64 @@ export interface SearchResult {
     model: string;
     year: number;
   };
+}
+
+// ---------------------------------------------------------------------------
+// Structured AI result types for special features
+// ---------------------------------------------------------------------------
+
+/** F3: Repair cost estimate result */
+export interface RepairCostEstimate {
+  service: string;
+  vehicle: string;
+  location: string;
+  labor_cost_min: number;
+  labor_cost_max: number;
+  parts_cost_min: number;
+  parts_cost_max: number;
+  total_min: number;
+  total_max: number;
+  labor_hours_est: string;
+  notes: string;
+  red_flags: string[];
+}
+
+/** F4: Compatible part result */
+export interface CompatiblePart {
+  brand: string;
+  part_number: string;
+  description: string;
+  type: 'OEM' | 'OEM-equivalent' | 'Aftermarket';
+  price_range?: string;
+  purchase_links: Array<{ retailer: string; url: string }>;
+}
+
+/** F5: Parsed maintenance record from natural language */
+export interface ParsedMaintenanceLog {
+  title: string;
+  type: 'routine' | 'repair' | 'modification' | 'diagnostic' | 'inspection';
+  date: string;
+  mileage?: number;
+  cost?: number;
+  parts_cost?: number;
+  labor_cost?: number;
+  parts_replaced?: string[];
+  shop_name?: string;
+  description?: string;
+  confidence: 'high' | 'medium' | 'low';
+}
+
+/** F6: Pre-purchase inspection result */
+export interface PrepurchaseReport {
+  vin: string;
+  vehicle: string;
+  overall_risk: 'low' | 'medium' | 'high';
+  recalls: Array<{ component: string; summary: string; remedy: string }>;
+  common_issues: Array<{ issue: string; severity: 'minor' | 'major' | 'critical'; description: string }>;
+  inspection_checklist: Array<{ area: string; what_to_check: string; red_flags: string }>;
+  estimated_remaining_life: Record<string, string>;
+  negotiation_tips: string[];
+  summary: string;
 }
 
 // AI model configurations

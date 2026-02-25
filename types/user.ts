@@ -36,10 +36,18 @@ export interface UserPreferences {
   maintenance_reminders?: boolean;
   diagnostic_alerts?: boolean;
   valuation_updates?: boolean;
+  recall_alerts?: boolean;
+  cost_alerts?: boolean;
+  chat_notifications?: boolean;
   theme?: 'light' | 'dark' | 'auto';
+  theme_mode?: 'dark' | 'light' | 'amoled';
+  accent_color?: string;
   distance_unit?: 'miles' | 'kilometers';
+  temperature_unit?: 'fahrenheit' | 'celsius';
+  fuel_unit?: 'gallons' | 'liters';
   currency?: string;
   language?: string;
+  default_vehicle_id?: string;
   [key: string]: any;
 }
 

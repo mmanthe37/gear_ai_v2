@@ -66,13 +66,48 @@ export {
   searchManualChunks,
   generateEmbedding,
   processManualPDF,
+  getProactiveSuggestions,
+  estimateRepairCost,
+  lookupCompatibleParts,
+  parseMaintenanceFromText,
+  analyzePrepurchaseVIN,
 } from './ai-service';
 
-// Diagnostics (CarMD integration)
+// AI multimodal service (F2: photo analysis, document scanning, audio analysis)
+export {
+  analyzeVehiclePhoto,
+  analyzeRepairDocument,
+  analyzeEngineNoise,
+  transcribeAudio,
+} from './ai-multimodal-service';
+
+// Diagnostics (AI-powered DTC analysis, health score, symptom checker, OBD-II)
 export {
   analyzeDTC,
   getCommonDTCInfo,
+  checkSymptoms,
+  calculateHealthScore,
+  getLatestHealthScore,
+  getHealthScoreHistory,
+  saveDiagnosticCode,
+  getDiagnosticHistory,
+  resolveDiagnosticCode,
+  updateCodeWithAIAnalysis,
+  connectOBDAdapter,
+  startLiveDataStream,
+  readDTCCodes,
+  readFreezeFrame,
+  clearDTCCodes,
 } from './diagnostic-service';
+
+// Recalls & TSBs (NHTSA)
+export {
+  checkRecallsByVehicle,
+  getRecallAlerts,
+  lookupTSBs,
+  acknowledgeRecall,
+  getUnacknowledgedRecallCount,
+} from './recall-service';
 
 // Health check
 export {
@@ -93,6 +128,7 @@ export {
   getUserVehicleCount,
   canAddVehicle,
   searchVehicleByVIN,
+  getMileageLogs,
 } from './vehicle-service';
 
 // Maintenance tracking
@@ -107,6 +143,7 @@ export {
   getRecentMaintenanceRecords,
   addMaintenanceAttachment,
   removeMaintenanceAttachment,
+  getServiceReminders,
 } from './maintenance-service';
 
 // Storage management

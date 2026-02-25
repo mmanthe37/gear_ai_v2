@@ -18,6 +18,32 @@ The "Liquid Glass" design system is the visual manifestation of Gear AI CoPilot'
 
 The design system treats the UI as a series of floating glass panels over a dynamic, abstract background representing motion and speed. Critical information "floats" closest to the user, creating a natural visual hierarchy through depth and opacity.
 
+## Brand Asset System
+
+### Canonical Runtime Assets
+
+All production branding must resolve to the canonical files in `assets/branding`:
+
+- `gearai-full.png`: main lockup for login, splash, and major brand anchors
+- `gearai-wordmark.png`: text lockup for compact, wide horizontal placements
+- `gearai-icon.png`: standard symbol for medium icon contexts
+- `gearai-icon-micro.png`: small symbol for dense UI/nav contexts
+- `gearai-button-symbol.png`: button glyph for high-value actions
+
+Raw design exports are stored in `assets/branding/source` and should not be referenced directly by app code.
+
+### Placement Rules
+
+- Use lockups in persistent brand anchors: login hero, shell header, sidebar brand block.
+- Use symbol-only marks for compact contexts: top nav badge, collapsed sidebar, loading states.
+- Use `gearai-button-symbol.png` only on high-intent actions (save, send, AI analyze, retrieve).
+- Keep utility/system actions semantic with framework icons (close, back, camera, settings utilities).
+
+### Trademark Rule
+
+- Show `™` on legal/hero/major lockups only.
+- Do not append `™` to small utility labels or constrained UI text.
+
 ## Color Palette
 
 ### Primary Colors

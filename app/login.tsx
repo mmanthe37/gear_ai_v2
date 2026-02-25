@@ -71,13 +71,27 @@ export default function LoginScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.hero}>
-            <GearLogo variant="full" size="lg" />
+            <GearLogo
+              variant="full"
+              size="lg"
+              decorative={false}
+              accessibilityLabel="GEAR AI CoPilot full logo"
+            />
+            <GearLogo
+              variant="wordmark"
+              size="md"
+              decorative={false}
+              accessibilityLabel="GEAR AI CoPilot wordmark"
+            />
             <Text style={styles.heroTitle}>Automotive Intelligence Platform</Text>
             <Text style={styles.heroSubtitle}>Clean, powerful assistance for every vehicle decision.</Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{isSignUp ? 'Create Account' : 'Sign In'}</Text>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>{isSignUp ? 'Create Account' : 'Sign In'}</Text>
+              <GearLogo variant="micro" size="md" />
+            </View>
 
             {isSignUp && (
               <View style={styles.inputGroup}>
@@ -202,6 +216,11 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: typeScale.xl,
     fontFamily: fontFamilies.heading,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   inputGroup: {
     gap: 6,

@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import GearLogo from '../components/branding/GearLogo';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { AuthProvider } from '../contexts/AuthContext';
 import { AppShellProvider } from '../contexts/AppShellContext';
@@ -16,6 +17,7 @@ export default function RootLayout() {
   if (!fontsLoaded) {
     return (
       <View style={styles.loading}>
+        <GearLogo variant="micro" size="lg" style={styles.loadingLogo} />
         <ActivityIndicator size="large" color={colors.brandAccent} />
       </View>
     );
@@ -39,5 +41,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.background,
+  },
+  loadingLogo: {
+    marginBottom: 14,
   },
 });

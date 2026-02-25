@@ -50,18 +50,42 @@ export async function signUp(signUpData: SignUpData): Promise<{ user: User | nul
 export async function signIn(credentials: AuthCredentials): Promise<{ user: User | null }> {
   const { email, password } = credentials;
 
+  console.log('[Auth] Attempting sign in for:', email);
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[Auth] signInWithPassword error:', error.message);
+    throw new Error(error.message);
+  }
+  console.log('[Auth] Sign in successful, user:', data.user.id);
 
-  // Fetch user profile
-  const { data: userProfile } = await supabase
+  // Fetch or auto-create user profile (handles accounts created before the DB trigger existed)
+  let { data: userProfile } = await supabase
     .from('users')
     .select('*')
     .eq('user_id', data.user.id)
     .single();
 
-  // Update last_login_at
-  if (userProfile) {
+  if (!userProfile) {
+    console.log('[Auth] No profile found, creating one for:', data.user.id);
+    const { data: newProfile, error: createError } = await supabase
+      .from('users')
+      .insert({
+        user_id: data.user.id,
+        email: data.user.email || '',
+        display_name: data.user.user_metadata?.display_name || null,
+        tier: 'free',
+        subscription_status: 'none',
+        last_login_at: new Date().toISOString(),
+        preferences: {},
+      })
+      .select()
+      .single();
+    if (createError) {
+      console.error('[Auth] Failed to create profile:', createError.message);
+    } else {
+      userProfile = newProfile;
+    }
+  } else {
     await supabase
       .from('users')
       .update({ last_login_at: new Date().toISOString() })
@@ -128,4 +152,35 @@ export async function updateUserProfile(
 
   if (error) throw new Error(`Failed to update profile: ${error.message}`);
   return data;
+}
+
+/**
+ * Update user preferences
+ */
+export async function updateUserPreferences(
+  userId: string,
+  preferences: import('../types/user').UserPreferences
+): Promise<void> {
+  const { error } = await supabase
+    .from('users')
+    .update({ preferences, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+
+  if (error) throw new Error(`Failed to update preferences: ${error.message}`);
+}
+
+/**
+ * Delete user account and all associated data (GDPR-compliant cascade)
+ */
+export async function deleteUserAccount(userId: string): Promise<void> {
+  // Cascade delete is handled by FK constraints on vehicles, chat_sessions, etc.
+  const { error: deleteError } = await supabase
+    .from('users')
+    .delete()
+    .eq('user_id', userId);
+
+  if (deleteError) throw new Error(`Failed to delete account: ${deleteError.message}`);
+
+  // Sign out of Supabase Auth session
+  await supabase.auth.signOut();
 }

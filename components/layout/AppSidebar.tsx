@@ -41,8 +41,14 @@ export default function AppSidebar({
   return (
     <View style={styles.sidebar}>
       <View style={styles.brandBlock}>
-        <GearLogo variant="icon" size={collapsed ? 'sm' : 'md'} showWordmark={!collapsed} />
-        {!collapsed && <Text style={styles.brandSubtext}>Automotive Intelligence</Text>}
+        {collapsed ? (
+          <GearLogo variant="micro" size="lg" />
+        ) : (
+          <>
+            <GearLogo variant="full" size="xs" />
+            <Text style={styles.brandSubtext}>Automotive Intelligence</Text>
+          </>
+        )}
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
@@ -188,13 +194,14 @@ const styles = StyleSheet.create({
     borderRightColor: colors.border,
   },
   brandBlock: {
-    minHeight: 94,
+    minHeight: 172,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   brandSubtext: {
     color: colors.textSecondary,

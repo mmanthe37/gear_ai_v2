@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import GearActionIcon from '../../components/branding/GearActionIcon';
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../contexts/AuthContext';
 import { decodeVIN } from '../../services/vin-decoder';
@@ -25,6 +25,9 @@ export default function NewVehicleScreen() {
   const [year, setYear] = useState('');
   const [vin, setVin] = useState('');
   const [mileage, setMileage] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [color, setColor] = useState('');
+  const [licensePlate, setLicensePlate] = useState('');
   const [saving, setSaving] = useState(false);
   const [decoding, setDecoding] = useState(false);
 
@@ -85,6 +88,9 @@ export default function NewVehicleScreen() {
         make: make.trim(),
         model: model.trim(),
         mileage: parsedMileage,
+        nickname: nickname.trim() || undefined,
+        color: color.trim() || undefined,
+        license_plate: licensePlate.trim() || undefined,
       });
 
       router.replace('/garage');
@@ -165,6 +171,41 @@ export default function NewVehicleScreen() {
             </View>
           </View>
 
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Nickname</Text>
+            <TextInput
+              value={nickname}
+              onChangeText={setNickname}
+              style={styles.input}
+              placeholder='e.g. "Daily Driver", "Weekend Warrior"'
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
+
+          <View style={styles.inlineRow}>
+            <View style={[styles.inputGroup, styles.inlineColumn]}>
+              <Text style={styles.label}>Color</Text>
+              <TextInput
+                value={color}
+                onChangeText={setColor}
+                style={styles.input}
+                placeholder="e.g. Pearl White"
+                placeholderTextColor={colors.textSecondary}
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.inlineColumn]}>
+              <Text style={styles.label}>License Plate</Text>
+              <TextInput
+                value={licensePlate}
+                onChangeText={setLicensePlate}
+                style={styles.input}
+                autoCapitalize="characters"
+                placeholder="e.g. ABC-1234"
+                placeholderTextColor={colors.textSecondary}
+              />
+            </View>
+          </View>
+
           <View style={styles.actions}>
             <Pressable
               accessibilityRole="button"
@@ -191,7 +232,7 @@ export default function NewVehicleScreen() {
                 <ActivityIndicator color={colors.background} />
               ) : (
                 <>
-                  <Ionicons name="save-outline" size={16} color={colors.background} />
+                  <GearActionIcon size="sm" />
                   <Text style={styles.primaryButtonText}>Save Vehicle</Text>
                 </>
               )}

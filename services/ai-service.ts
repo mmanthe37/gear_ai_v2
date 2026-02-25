@@ -14,6 +14,11 @@ import {
   SearchQuery,
   SearchResult,
   RAGSource,
+  VehicleFullContext,
+  RepairCostEstimate,
+  CompatiblePart,
+  ParsedMaintenanceLog,
+  PrepurchaseReport,
 } from '../types';
 import {
   VehicleLookup,
@@ -53,6 +58,57 @@ function buildVehicleContext(vehicle: VehicleLookup): string {
   if (vehicle.trim) ctx += ` ${vehicle.trim}`;
   if (vehicle.vin) ctx += ` (VIN: ${vehicle.vin})`;
   return ctx;
+}
+
+/** F1: Build enhanced context from full vehicle data including maintenance history and active codes */
+function buildEnhancedVehicleContext(ctx: VehicleFullContext): string {
+  let out = `\nVehicle: ${ctx.year} ${ctx.make} ${ctx.model}`;
+  if (ctx.trim) out += ` ${ctx.trim}`;
+  if (ctx.vin) out += ` (VIN: ${ctx.vin})`;
+  if (ctx.current_mileage) out += `\nCurrent Mileage: ${ctx.current_mileage.toLocaleString()} miles`;
+  if (ctx.monthly_mileage_delta) out += `\nMileage this month: +${ctx.monthly_mileage_delta} miles`;
+
+  if (ctx.recent_maintenance?.length) {
+    out += '\n\nRecent Maintenance History:';
+    ctx.recent_maintenance.slice(0, 8).forEach((r) => {
+      out += `\n- ${r.title} on ${r.date}`;
+      if (r.mileage) out += ` at ${r.mileage.toLocaleString()} mi`;
+      if (r.parts_replaced?.length) out += ` (parts: ${r.parts_replaced.join(', ')})`;
+    });
+  }
+
+  if (ctx.active_codes?.length) {
+    out += '\n\nActive Diagnostic Codes:';
+    ctx.active_codes.forEach((c) => {
+      out += `\n- ${c.code}: ${c.description} [${c.severity}]`;
+    });
+  }
+
+  if (ctx.pending_services?.length) {
+    out += '\n\nPending / Upcoming Services:';
+    ctx.pending_services.slice(0, 5).forEach((s) => {
+      out += `\n- ${s.title} [${s.priority}]`;
+      if (s.due_mileage) out += ` — due at ${s.due_mileage.toLocaleString()} mi`;
+      if (s.due_date) out += ` — due by ${s.due_date}`;
+    });
+  }
+
+  return out;
+}
+
+/** F1: Build seasonal advice context based on current month */
+function buildSeasonalContext(): string {
+  const month = new Date().getMonth(); // 0=Jan, 11=Dec
+  if (month >= 10 || month <= 1) {
+    return '\n\nSeasonal Note: Winter conditions — proactively mention battery health, antifreeze levels, tire tread/pressure, wiper blades, and 4WD/AWD readiness when relevant.';
+  }
+  if (month >= 2 && month <= 4) {
+    return '\n\nSeasonal Note: Spring — proactively mention winter damage inspection (undercarriage, brakes, alignment), pollen cabin filter replacement, and A/C pre-season check when relevant.';
+  }
+  if (month >= 5 && month <= 7) {
+    return '\n\nSeasonal Note: Summer — proactively mention coolant system health, A/C refrigerant, tire pressure (heat expansion), and long-trip readiness when relevant.';
+  }
+  return '\n\nSeasonal Note: Fall — proactively mention tire swap (winter tires), battery load test, and heating system readiness when relevant.';
 }
 
 function buildRAGContext(sources: RAGSource[]): string {
@@ -115,7 +171,12 @@ export async function generateAIResponse(
   const vehicle = extractVehicleFromRequest(request);
 
   if (vehicle) {
-    vehicleContext = buildVehicleContext(vehicle);
+    // Use full VehicleFullContext if provided (F1), else fall back to basic lookup
+    vehicleContext = request.vehicle_context
+      ? buildEnhancedVehicleContext(request.vehicle_context)
+      : buildVehicleContext(vehicle);
+
+    vehicleContext += buildSeasonalContext();
 
     // RAG search: find relevant manual chunks
     if (request.include_rag !== false) {
@@ -164,7 +225,16 @@ export async function generateAIResponse(
     recallContext;
 
   try {
-    const model = request.context_type === 'general' ? FALLBACK_MODEL : DEFAULT_MODEL;
+    const model = request.attachment?.type === 'image' ? 'gpt-4o' :
+      request.context_type === 'general' ? FALLBACK_MODEL : DEFAULT_MODEL;
+
+    // Build user message — plain text or multimodal with image
+    const userContent: any = request.attachment?.type === 'image'
+      ? [
+          { type: 'image_url', image_url: { url: request.attachment.data_uri, detail: 'high' } },
+          { type: 'text', text: request.message },
+        ]
+      : request.message;
 
     const res = await fetch(OPENAI_CHAT_URL, {
       method: 'POST',
@@ -176,7 +246,7 @@ export async function generateAIResponse(
         model,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: request.message },
+          { role: 'user', content: userContent },
         ],
         temperature: request.temperature ?? 0.7,
         max_tokens: request.max_tokens ?? 1000,
@@ -249,6 +319,367 @@ function getSmartTemplateResponse(input: string): string {
   }
 
   return 'I\'m your Gear AI assistant, ready to help with vehicle maintenance, owner\'s manual queries, diagnostics, and safety information. Ask me about oil specifications, tire pressure, maintenance schedules, dashboard warnings, or any other vehicle-related question. For the best experience, make sure your vehicle is set up so I can reference your specific owner\'s manual.';
+}
+
+// ---------------------------------------------------------------------------
+// F1: Proactive suggestions based on vehicle state
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate proactive maintenance/safety suggestions based on current vehicle context.
+ * Returns up to 3 short suggestion strings to show as chips in the chat UI.
+ */
+export async function getProactiveSuggestions(ctx: VehicleFullContext): Promise<string[]> {
+  const suggestions: string[] = [];
+
+  // Mileage-based oil change prediction
+  if (ctx.current_mileage && ctx.monthly_mileage_delta && ctx.recent_maintenance) {
+    const lastOil = ctx.recent_maintenance.find((r) =>
+      r.title.toLowerCase().includes('oil') && r.mileage
+    );
+    if (lastOil?.mileage) {
+      const nextOilMileage = lastOil.mileage + 5000;
+      const milesRemaining = nextOilMileage - ctx.current_mileage;
+      if (milesRemaining > 0 && ctx.monthly_mileage_delta > 0) {
+        const monthsOut = (milesRemaining / ctx.monthly_mileage_delta).toFixed(1);
+        const dueDate = new Date();
+        dueDate.setMonth(dueDate.getMonth() + parseFloat(monthsOut));
+        suggestions.push(
+          `Oil change due ~${dueDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} (${milesRemaining.toLocaleString()} mi remaining)`
+        );
+      }
+    }
+  }
+
+  // Active codes warning
+  if (ctx.active_codes?.length) {
+    const critical = ctx.active_codes.filter((c) => c.severity === 'critical' || c.severity === 'high');
+    if (critical.length) {
+      suggestions.push(`⚠️ ${critical.length} active code${critical.length > 1 ? 's' : ''} need attention (${critical[0].code})`);
+    }
+  }
+
+  // Pending high-priority services
+  if (ctx.pending_services?.length) {
+    const overdue = ctx.pending_services.filter((s) => s.priority === 'high');
+    if (overdue.length) {
+      suggestions.push(`📋 ${overdue[0].title} is due soon`);
+    }
+  }
+
+  // Seasonal suggestion
+  const month = new Date().getMonth();
+  if ((month === 9 || month === 10) && ctx.year && ctx.make) {
+    suggestions.push(`❄️ Pre-winter checklist for your ${ctx.year} ${ctx.make} ${ctx.model}`);
+  }
+
+  return suggestions.slice(0, 3);
+}
+
+// ---------------------------------------------------------------------------
+// F3: AI Repair Cost Estimator
+// ---------------------------------------------------------------------------
+
+/**
+ * Estimate repair cost for a given service on the user's vehicle at their location.
+ */
+export async function estimateRepairCost(
+  serviceDescription: string,
+  vehicle: VehicleFullContext,
+  location: string
+): Promise<RepairCostEstimate> {
+  const apiKey = Constants.expoConfig?.extra?.openaiApiKey || process.env.OPENAI_API_KEY;
+  const vehicleStr = `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ' ' + vehicle.trim : ''}`;
+
+  const fallback: RepairCostEstimate = {
+    service: serviceDescription,
+    vehicle: vehicleStr,
+    location,
+    labor_cost_min: 0,
+    labor_cost_max: 0,
+    parts_cost_min: 0,
+    parts_cost_max: 0,
+    total_min: 0,
+    total_max: 0,
+    labor_hours_est: 'N/A',
+    notes: 'Could not generate estimate. Please configure your OpenAI API key.',
+    red_flags: [],
+  };
+
+  if (!apiKey) return fallback;
+
+  const systemPrompt = `You are an expert automotive service advisor with knowledge of current labor rates and parts pricing across the US.
+Always respond with valid JSON only — no markdown, no extra text.`;
+
+  const userPrompt = `Estimate the cost for: "${serviceDescription}"
+Vehicle: ${vehicleStr}
+Location: ${location}
+
+Return JSON with exactly these keys:
+{
+  "service": "${serviceDescription}",
+  "vehicle": "${vehicleStr}",
+  "location": "${location}",
+  "labor_cost_min": 150,
+  "labor_cost_max": 200,
+  "parts_cost_min": 100,
+  "parts_cost_max": 150,
+  "total_min": 250,
+  "total_max": 350,
+  "labor_hours_est": "2–3 hours",
+  "notes": "Notes about what affects price, OEM vs aftermarket options, etc.",
+  "red_flags": ["Signs of overcharging to watch for"]
+}`;
+
+  try {
+    const res = await fetch(OPENAI_CHAT_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: DEFAULT_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.2,
+        max_tokens: 600,
+      }),
+    });
+    if (!res.ok) return fallback;
+    const json = await res.json();
+    return JSON.parse(json.choices?.[0]?.message?.content || '{}') as RepairCostEstimate;
+  } catch {
+    return fallback;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// F4: AI Parts Lookup
+// ---------------------------------------------------------------------------
+
+/**
+ * Look up compatible parts for the user's vehicle across OEM and aftermarket brands.
+ */
+export async function lookupCompatibleParts(
+  partType: string,
+  vehicle: VehicleFullContext
+): Promise<CompatiblePart[]> {
+  const apiKey = Constants.expoConfig?.extra?.openaiApiKey || process.env.OPENAI_API_KEY;
+  if (!apiKey) return [];
+
+  const vehicleStr = `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ' ' + vehicle.trim : ''}`;
+  const vinNote = vehicle.vin ? ` VIN: ${vehicle.vin}` : '';
+
+  const systemPrompt = `You are an automotive parts expert with knowledge of OEM and aftermarket part numbers for all major makes and models.
+Always respond with valid JSON only — no markdown, no extra text.`;
+
+  const userPrompt = `What ${partType} parts are compatible with a ${vehicleStr}?${vinNote}
+Return a JSON array of compatible parts. Each entry should have exactly these keys:
+[
+  {
+    "brand": "Bosch",
+    "part_number": "3323",
+    "description": "Premium oil filter",
+    "type": "OEM-equivalent",
+    "price_range": "$8–$12",
+    "purchase_links": [
+      {"retailer": "Amazon", "url": "https://www.amazon.com/s?k=Bosch+3323+oil+filter"},
+      {"retailer": "AutoZone", "url": "https://www.autozone.com/searchresult?searchText=Bosch+3323"},
+      {"retailer": "RockAuto", "url": "https://www.rockauto.com"}
+    ]
+  }
+]
+Include 4–6 options covering OEM, OEM-equivalent, and quality aftermarket brands (Bosch, Wix, Fram, Denso, NGK, Motorcraft, ACDelco, etc.).`;
+
+  try {
+    const res = await fetch(OPENAI_CHAT_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: DEFAULT_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.1,
+        max_tokens: 1200,
+      }),
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return JSON.parse(json.choices?.[0]?.message?.content || '[]') as CompatiblePart[];
+  } catch {
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// F5: Conversational Maintenance Logging
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse natural language maintenance description into a structured log entry.
+ * Returns null if no maintenance event is detected in the text.
+ */
+export async function parseMaintenanceFromText(
+  text: string,
+  vehicle?: VehicleFullContext
+): Promise<ParsedMaintenanceLog | null> {
+  const apiKey = Constants.expoConfig?.extra?.openaiApiKey || process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const vehicleNote = vehicle
+    ? `Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}, Current mileage: ${vehicle.current_mileage || 'unknown'}`
+    : '';
+
+  const systemPrompt = `You are an automotive service log parser. Extract structured maintenance data from natural language descriptions.
+${vehicleNote}
+If the text does NOT describe a maintenance event, return null.
+Always respond with valid JSON only — no markdown, no extra text.`;
+
+  const userPrompt = `Parse this text for a maintenance log entry: "${text}"
+If this describes a maintenance event, return a JSON object:
+{
+  "title": "Short service name (e.g. Oil Change)",
+  "type": "routine|repair|modification|diagnostic|inspection",
+  "date": "YYYY-MM-DD (today if not specified: ${new Date().toISOString().split('T')[0]})",
+  "mileage": 131500,
+  "cost": 45,
+  "parts_cost": 45,
+  "labor_cost": 0,
+  "parts_replaced": ["Mobil 1 5W-30 oil", "Bosch filter"],
+  "shop_name": null,
+  "description": "Full details from the text",
+  "confidence": "high|medium|low"
+}
+If no maintenance event is described, return: null`;
+
+  try {
+    const res = await fetch(OPENAI_CHAT_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: DEFAULT_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.1,
+        max_tokens: 400,
+      }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const raw = json.choices?.[0]?.message?.content?.trim() || 'null';
+    if (raw === 'null') return null;
+    return JSON.parse(raw) as ParsedMaintenanceLog;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// F6: Pre-Purchase Inspection Assistant
+// ---------------------------------------------------------------------------
+
+/**
+ * Analyze a VIN for pre-purchase inspection: recalls, common issues,
+ * inspection checklist, and estimated remaining component life.
+ */
+export async function analyzePrepurchaseVIN(
+  vin: string,
+  location?: string
+): Promise<PrepurchaseReport> {
+  const apiKey = Constants.expoConfig?.extra?.openaiApiKey || process.env.OPENAI_API_KEY;
+
+  // Always decode the VIN to get vehicle info
+  const { decodeVIN } = await import('./vin-decoder');
+  const { getRecalls } = await import('./manual-retrieval');
+
+  let vehicleStr = vin;
+  let recalls: Array<{ component: string; summary: string; remedy: string }> = [];
+
+  try {
+    const decoded = await decodeVIN(vin);
+    if (decoded && !decoded.error_code) {
+      vehicleStr = `${decoded.year} ${decoded.make} ${decoded.model}${decoded.trim ? ' ' + decoded.trim : ''}`;
+      const recallResult = await getRecalls({ year: decoded.year, make: decoded.make, model: decoded.model });
+      recalls = recallResult.recalls.map((r: any) => ({
+        component: r.Component || r.component,
+        summary: r.Summary || r.summary,
+        remedy: r.Remedy || r.remedy,
+      }));
+    }
+  } catch {
+    // continue with VIN-only analysis
+  }
+
+  const fallback: PrepurchaseReport = {
+    vin,
+    vehicle: vehicleStr,
+    overall_risk: 'medium',
+    recalls,
+    common_issues: [],
+    inspection_checklist: [],
+    estimated_remaining_life: {},
+    negotiation_tips: [],
+    summary: 'Could not generate full report. Please configure your OpenAI API key.',
+  };
+
+  if (!apiKey) return { ...fallback, recalls };
+
+  const systemPrompt = `You are an expert pre-purchase vehicle inspector with deep knowledge of common issues, reliability data, and inspection procedures for all makes and models.
+Always respond with valid JSON only — no markdown, no extra text.`;
+
+  const recallSummary = recalls.length
+    ? `Known recalls (${recalls.length}): ${recalls.map((r) => r.component).join(', ')}`
+    : 'No known recalls found.';
+
+  const userPrompt = `Pre-purchase analysis for VIN: ${vin} (${vehicleStr})${location ? ` — buyer located in ${location}` : ''}
+${recallSummary}
+
+Return a JSON object with exactly these keys:
+{
+  "vin": "${vin}",
+  "vehicle": "${vehicleStr}",
+  "overall_risk": "low|medium|high",
+  "recalls": ${JSON.stringify(recalls)},
+  "common_issues": [
+    {"issue": "known problem name", "severity": "minor|major|critical", "description": "what to look for"}
+  ],
+  "inspection_checklist": [
+    {"area": "Engine", "what_to_check": "Look for...", "red_flags": "Be concerned if..."}
+  ],
+  "estimated_remaining_life": {
+    "engine": "likely 100,000+ miles if maintained",
+    "transmission": "...",
+    "brakes": "...",
+    "tires": "..."
+  },
+  "negotiation_tips": ["tip1", "tip2"],
+  "summary": "3-4 sentence overall assessment and recommendation"
+}`;
+
+  try {
+    const res = await fetch(OPENAI_CHAT_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: DEFAULT_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.3,
+        max_tokens: 1500,
+      }),
+    });
+    if (!res.ok) return { ...fallback, recalls };
+    const json = await res.json();
+    return JSON.parse(json.choices?.[0]?.message?.content || '{}') as PrepurchaseReport;
+  } catch {
+    return { ...fallback, recalls };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -325,7 +756,17 @@ export async function processManualPDF(
 // ---------------------------------------------------------------------------
 
 function extractVehicleFromRequest(request: AIRequest): VehicleLookup | null {
-  // Check metadata for vehicle info
+  // Prefer full vehicle_context (F1)
+  if (request.vehicle_context) {
+    return {
+      year: request.vehicle_context.year,
+      make: request.vehicle_context.make,
+      model: request.vehicle_context.model,
+      trim: request.vehicle_context.trim,
+      vin: request.vehicle_context.vin,
+    };
+  }
+  // Check metadata for vehicle info (legacy)
   const meta = request as any;
   if (meta.vehicle_year && meta.vehicle_make && meta.vehicle_model) {
     return {

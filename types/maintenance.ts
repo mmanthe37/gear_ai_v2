@@ -96,6 +96,9 @@ export interface MaintenanceFormData {
   shop_location?: string;
   parts_replaced?: string[];
   photos?: File[] | string[];
+  next_service_date?: string;
+  next_service_mileage?: number;
+  attachment_urls?: string[];
 }
 
 export interface MaintenanceStats {
@@ -201,3 +204,67 @@ export const CommonServiceTypes = {
     typical_cost_max: 200,
   },
 } as const;
+
+export interface InstalledPart {
+  part_id: string;
+  vehicle_id: string;
+  maintenance_record_id?: string;
+  part_name: string;
+  brand?: string;
+  part_number?: string;
+  category: 'oil'|'coolant'|'transmission_fluid'|'brake_fluid'|'power_steering_fluid'|'fuel_filter'|'air_filter'|'cabin_filter'|'spark_plug'|'brake_pad'|'brake_rotor'|'tire'|'battery'|'belt'|'other';
+  install_date: string;
+  install_mileage?: number;
+  warranty_months?: number;
+  warranty_miles?: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ServiceProvider {
+  provider_id: string;
+  user_id: string;
+  name: string;
+  phone?: string;
+  address?: string;
+  specialty?: string;
+  rating?: number;
+  notes?: string;
+  is_preferred: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MaintenanceBudget {
+  budget_id: string;
+  user_id: string;
+  vehicle_id?: string;
+  period: 'monthly' | 'annual';
+  amount: number;
+  alert_at_percent: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CostAnalytics {
+  total_lifetime: number;
+  total_this_year: number;
+  total_this_month: number;
+  cost_per_mile: number;
+  by_category: { category: string; total: number }[];
+  by_month: { month: string; total: number }[];
+  by_vehicle: { vehicle_id: string; name: string; total: number }[];
+}
+
+export interface MaintenanceTemplate {
+  id: string;
+  title: string;
+  type: MaintenanceType;
+  description: string;
+  default_parts?: string[];
+  estimated_cost_min: number;
+  estimated_cost_max: number;
+  interval_miles?: number;
+  interval_months?: number;
+}

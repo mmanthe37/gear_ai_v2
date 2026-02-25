@@ -1,26 +1,33 @@
 {
   "expo": {
-    "name": "AI Car Companion",
-    "slug": "vehicle-manual-assist",
+    "name": "Gear AI CoPilot",
+    "slug": "gear-ai-copilot",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "vehicle-manual-assist",
+    "scheme": "gear-ai-copilot",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gearai.copilot"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0B1117"
       },
+      "package": "com.gearai.copilot",
       "edgeToEdgeEnabled": true
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -31,7 +38,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#0B1117"
         }
       ],
       "expo-web-browser"

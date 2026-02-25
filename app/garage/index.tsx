@@ -9,12 +9,25 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import GearActionIcon from '../../components/branding/GearActionIcon';
+import GearLogo from '../../components/branding/GearLogo';
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserVehicles } from '../../services/vehicle-service';
-import type { Vehicle } from '../../types/vehicle';
+import type { Vehicle, VehicleStatus } from '../../types/vehicle';
 import { colors, radii } from '../../theme/tokens';
 import { fontFamilies, typeScale } from '../../theme/typography';
+
+const STATUS_COLORS: Record<VehicleStatus, string> = {
+  active:   '#22C55E',
+  stored:   '#4AA3FF',
+  for_sale: '#F59E0B',
+  sold:     '#A6B4C3',
+  totaled:  '#EF4444',
+};
+const STATUS_LABELS: Record<VehicleStatus, string> = {
+  active: 'Active', stored: 'Stored', for_sale: 'For Sale', sold: 'Sold', totaled: 'Totaled',
+};
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
@@ -70,7 +83,7 @@ export default function GarageScreen() {
               ]}
               onPress={() => router.push('/garage/new')}
             >
-              <Ionicons name="add" size={18} color={colors.background} />
+              <GearActionIcon size="md" />
               <Text style={styles.primaryButtonText}>Add Vehicle</Text>
             </Pressable>
           </View>
@@ -88,7 +101,7 @@ export default function GarageScreen() {
             <ActivityIndicator size="large" color={colors.brandAccent} style={{ marginTop: 20 }} />
           ) : vehicles.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="car-sport-outline" size={36} color={colors.textSecondary} />
+              <GearLogo variant="micro" size="lg" />
               <Text style={styles.emptyTitle}>No vehicles added</Text>
               <Text style={styles.emptySubtitle}>Add your first vehicle to start using Gear AI CoPilot.</Text>
             </View>
@@ -104,12 +117,31 @@ export default function GarageScreen() {
                 onPress={() => router.push(`/garage/${vehicle.vehicle_id}`)}
               >
                 <View style={styles.vehicleInfoWrap}>
-                  <Text style={styles.vehicleName}>{vehicle.year} {vehicle.make} {vehicle.model}</Text>
-                  <Text style={styles.vehicleMeta}>
-                    {vehicle.current_mileage
-                      ? `${vehicle.current_mileage.toLocaleString()} mi`
-                      : 'Mileage not set'}
+                  <Text style={styles.vehicleName}>
+                    {vehicle.nickname
+                      ? `${vehicle.nickname}`
+                      : `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                   </Text>
+                  {vehicle.nickname && (
+                    <Text style={styles.vehicleSubName}>
+                      {vehicle.year} {vehicle.make} {vehicle.model}
+                    </Text>
+                  )}
+                  <View style={styles.vehicleMetaRow}>
+                    <Text style={styles.vehicleMeta}>
+                      {vehicle.current_mileage
+                        ? `${vehicle.current_mileage.toLocaleString()} mi`
+                        : 'Mileage not set'}
+                    </Text>
+                    {vehicle.status && vehicle.status !== 'active' && (
+                      <View style={[styles.statusPill, { borderColor: STATUS_COLORS[vehicle.status as VehicleStatus] }]}>
+                        <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[vehicle.status as VehicleStatus] }]} />
+                        <Text style={[styles.statusPillText, { color: STATUS_COLORS[vehicle.status as VehicleStatus] }]}>
+                          {STATUS_LABELS[vehicle.status as VehicleStatus]}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
 
                 <Pressable
@@ -130,7 +162,7 @@ export default function GarageScreen() {
                     pressed && styles.buttonInteraction,
                   ]}
                 >
-                  <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.textPrimary} />
+                  <GearActionIcon size="sm" />
                   <Text style={styles.secondaryButtonText}>Chat</Text>
                 </Pressable>
               </Pressable>
@@ -270,11 +302,41 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.body,
     fontSize: typeScale.md,
   },
+  vehicleSubName: {
+    color: colors.textSecondary,
+    fontFamily: fontFamilies.body,
+    fontSize: typeScale.xs,
+    marginTop: 1,
+  },
+  vehicleMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 3,
+    flexWrap: 'wrap',
+  },
   vehicleMeta: {
     color: colors.textSecondary,
     fontFamily: fontFamilies.body,
     fontSize: typeScale.xs,
-    marginTop: 2,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: radii.full,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusPillText: {
+    fontFamily: fontFamilies.body,
+    fontSize: 11,
   },
   secondaryButton: {
     minHeight: 36,

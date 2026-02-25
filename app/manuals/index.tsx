@@ -11,11 +11,12 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import GearActionIcon from '../../components/branding/GearActionIcon';
 import AppShell from '../../components/layout/AppShell';
 import {
   getVehicleReport,
   type VehicleReport,
+  type RetrievalProgressStep,
 } from '../../services/manual-retrieval';
 import type { VehicleLookup } from '../../types/manual';
 import { colors, radii } from '../../theme/tokens';
@@ -28,6 +29,18 @@ interface RetrievedManual {
   report: VehicleReport;
 }
 
+const PROGRESS_LABELS: Record<RetrievalProgressStep, string> = {
+  checking_cache: 'Checking local cache...',
+  trying_oem: 'Checking manufacturer site...',
+  asking_ai: 'Asking AI to locate PDF...',
+  verifying_url: 'Verifying PDF URL...',
+  downloading_pdf: 'Downloading PDF...',
+  uploading: 'Uploading to secure storage...',
+  processing_rag: 'Processing manual for AI search...',
+  done: 'Complete',
+  fallback: 'No direct PDF found',
+};
+
 export default function ManualsScreen() {
   const [lookupMode, setLookupMode] = useState<LookupMode>('vin');
   const [vinInput, setVinInput] = useState('');
@@ -35,6 +48,7 @@ export default function ManualsScreen() {
   const [makeInput, setMakeInput] = useState('');
   const [modelInput, setModelInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [progressStep, setProgressStep] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [retrieved, setRetrieved] = useState<RetrievedManual[]>([]);
 
@@ -46,15 +60,19 @@ export default function ManualsScreen() {
     }
 
     setError(null);
+    setProgressStep('');
     setLoading(true);
     try {
-      const report = await getVehicleReport(vin);
+      const report = await getVehicleReport(vin, (step, detail) => {
+        setProgressStep(detail || PROGRESS_LABELS[step] || step);
+      });
       setRetrieved((prev) => [{ id: `${Date.now()}`, report }, ...prev]);
       setVinInput('');
     } catch (err: any) {
       setError(err?.message || 'Failed to lookup VIN.');
     } finally {
       setLoading(false);
+      setProgressStep('');
     }
   }, [vinInput]);
 
@@ -77,9 +95,12 @@ export default function ManualsScreen() {
     };
 
     setError(null);
+    setProgressStep('');
     setLoading(true);
     try {
-      const report = await getVehicleReport(vehicle);
+      const report = await getVehicleReport(vehicle, (step, detail) => {
+        setProgressStep(detail || PROGRESS_LABELS[step] || step);
+      });
       setRetrieved((prev) => [{ id: `${Date.now()}`, report }, ...prev]);
       setYearInput('');
       setMakeInput('');
@@ -88,6 +109,7 @@ export default function ManualsScreen() {
       setError(err?.message || 'Manual lookup failed.');
     } finally {
       setLoading(false);
+      setProgressStep('');
     }
   }, [yearInput, makeInput, modelInput]);
 
@@ -187,10 +209,15 @@ export default function ManualsScreen() {
             onPress={lookupMode === 'vin' ? handleVinLookup : handleManualLookup}
           >
             {loading ? (
-              <ActivityIndicator color={colors.background} />
+              <View style={styles.loadingRow}>
+                <ActivityIndicator color={colors.background} size="small" />
+                {!!progressStep && (
+                  <Text style={styles.progressText} numberOfLines={1}>{progressStep}</Text>
+                )}
+              </View>
             ) : (
               <>
-                <Ionicons name="search" size={16} color={colors.background} />
+                <GearActionIcon size="sm" />
                 <Text style={styles.primaryButtonText}>Retrieve Manual</Text>
               </>
             )}
@@ -212,7 +239,9 @@ export default function ManualsScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.resultTitle}>{vehicle.year} {vehicle.make} {vehicle.model}</Text>
                     <Text style={styles.resultMeta}>
-                      Source: {entry.report.manual.source} | Recalls: {recallCount}
+                      {entry.report.manual.source === 'web_search'
+                        ? 'No direct PDF found — clicking will search the web'
+                        : `Source: ${entry.report.manual.source}`} | Recalls: {recallCount}
                     </Text>
                     {safety ? <Text style={styles.resultMeta}>NHTSA Safety: {safety}/5</Text> : null}
                   </View>
@@ -222,11 +251,15 @@ export default function ManualsScreen() {
                       accessibilityRole="button"
                       onPress={() => openManual(entry.report.manual.manual_url || undefined)}
                       style={({ pressed }) => [
-                        styles.secondaryButton,
+                        entry.report.manual.source === 'web_search'
+                          ? styles.searchButton
+                          : styles.secondaryButton,
                         pressed && styles.buttonInteraction,
                       ]}
                     >
-                      <Text style={styles.secondaryButtonText}>Open</Text>
+                      <Text style={styles.secondaryButtonText}>
+                        {entry.report.manual.source === 'web_search' ? 'Search Web' : 'Open PDF'}
+                      </Text>
                     </Pressable>
 
                     <Pressable
@@ -247,6 +280,7 @@ export default function ManualsScreen() {
                         pressed && styles.buttonInteraction,
                       ]}
                     >
+                      <GearActionIcon size="xs" />
                       <Text style={styles.primaryChipText}>Ask AI</Text>
                     </Pressable>
                   </View>
@@ -346,6 +380,19 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.heading,
     fontSize: typeScale.sm,
   },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  progressText: {
+    color: colors.background,
+    fontFamily: fontFamilies.body,
+    fontSize: typeScale.xs,
+    flexShrink: 1,
+  },
   resultsCard: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -395,6 +442,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  searchButton: {
+    minHeight: 36,
+    borderWidth: 1,
+    borderColor: colors.textSecondary,
+    borderRadius: radii.full,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   secondaryButtonText: {
     color: colors.textPrimary,
     fontFamily: fontFamilies.body,
@@ -409,6 +466,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
   },
   primaryChipText: {
     color: colors.textPrimary,

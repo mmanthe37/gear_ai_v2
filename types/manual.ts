@@ -23,7 +23,7 @@ export interface VehicleLookup {
 
 export interface ManualRetrievalResult {
   /** Where the manual URL was sourced from */
-  source: 'vehicledatabases' | 'nhtsa_cache' | 'web_search' | 'oem_fallback' | 'cache';
+  source: 'vehicledatabases' | 'nhtsa_cache' | 'web_search' | 'oem_fallback' | 'cache' | 'ai_discovered';
   vehicle: VehicleLookup;
   manual_url: string | null;
   manual_title?: string;

@@ -10,6 +10,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase)](https://supabase.com/)
 
+![Gear AI CoPilot Brand Lockup](assets/branding/gearai-full.png)
+
 ---
 
 ## 🎯 Development Stage: Phase 1 MVP (85% Complete)
@@ -30,6 +32,7 @@
 
 - [Development Stage](#-development-stage-phase-1-mvp-65-complete)
 - [Features](#-features)
+- [Brand System](#-brand-system)
 - [Technology Stack](#-technology-stack)
 - [Getting Started](#-getting-started)
 - [Project Structure](#-project-structure)
@@ -38,6 +41,28 @@
 - [Roadmap](#-roadmap)
 - [Contributing](#-contributing)
 - [License](#-license)
+
+---
+
+## 🎨 Brand System
+
+Gear AI CoPilot uses a canonical asset set in `assets/branding` for all runtime branding:
+
+- `gearai-full.png`: primary lockup for hero/login/brand header surfaces
+- `gearai-wordmark.png`: standalone wordmark for compact headings
+- `gearai-icon.png` / `gearai-icon-micro.png`: symbol variants for nav and small UI contexts
+- `gearai-button-symbol.png`: high-value action glyph (send, save, AI actions)
+
+Platform metadata assets are generated from the canonical set:
+
+- `assets/images/icon.png`
+- `assets/images/adaptive-icon.png`
+- `assets/images/splash-icon.png`
+- `assets/images/favicon.png`
+
+Raw design exports are preserved in `assets/branding/source`.
+
+Trademark usage follows a selective approach: use `™` on hero/legal/lockup surfaces, not on tiny utility labels.
 
 ---
 

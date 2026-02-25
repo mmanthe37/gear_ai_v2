@@ -4,6 +4,31 @@
  * Core data models for vehicle management
  */
 
+export type VehicleStatus = 'active' | 'stored' | 'for_sale' | 'sold' | 'totaled';
+
+export interface MileageLogEntry {
+  log_id?: string;
+  vehicle_id?: string;
+  mileage: number;
+  logged_date: string; // ISO date
+  notes?: string;
+  created_at?: string;
+}
+
+export interface VehicleMetadata {
+  nickname?: string;
+  status?: VehicleStatus;
+  registration_expiry?: string;
+  inspection_due?: string;
+  insurance_provider?: string;
+  insurance_policy_number?: string;
+  insurance_coverage_type?: string;
+  insurance_expiry?: string;
+  dealer_seller_info?: string;
+  loan_details?: string;
+  [key: string]: unknown;
+}
+
 export interface Vehicle {
   vehicle_id: string;
   user_id: string;
@@ -28,11 +53,22 @@ export interface Vehicle {
   profile_image?: string;
   color?: string;
   license_plate?: string;
+  // Enhanced profile fields (added via migration 20250601000000)
+  nickname?: string;
+  status?: VehicleStatus;
+  registration_expiry?: string;
+  inspection_due?: string;
+  insurance_provider?: string;
+  insurance_policy_number?: string;
+  insurance_coverage_type?: string;
+  insurance_expiry?: string;
+  dealer_seller_info?: string;
+  loan_details?: string;
   manual_id?: string;
   created_at: string;
   updated_at: string;
   is_active: boolean;
-  metadata?: Record<string, any>;
+  metadata?: VehicleMetadata;
 }
 
 export interface VehicleFormData {
@@ -46,6 +82,16 @@ export interface VehicleFormData {
   license_plate?: string;
   purchase_date?: string;
   purchase_price?: number;
+  nickname?: string;
+  status?: VehicleStatus;
+  registration_expiry?: string;
+  inspection_due?: string;
+  insurance_provider?: string;
+  insurance_policy_number?: string;
+  insurance_coverage_type?: string;
+  insurance_expiry?: string;
+  dealer_seller_info?: string;
+  loan_details?: string;
 }
 
 export interface VINDecodeResult {

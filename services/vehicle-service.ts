@@ -5,7 +5,7 @@
  */
 
 import { supabase } from '../lib/supabase';
-import { Vehicle, VehicleFormData } from '../types/vehicle';
+import { MileageLogEntry, Vehicle, VehicleFormData, VehicleStatus } from '../types/vehicle';
 import { UNLIMITED_VEHICLES } from './constants';
 
 /**
@@ -28,6 +28,8 @@ export async function createVehicle(
       license_plate: vehicleData.license_plate,
       purchase_date: vehicleData.purchase_date,
       purchase_price: vehicleData.purchase_price,
+      nickname: vehicleData.nickname,
+      status: vehicleData.status || 'active',
       is_active: true,
     };
 
@@ -128,6 +130,17 @@ export async function updateVehicle(
     if (updates.license_plate !== undefined) updateData.license_plate = updates.license_plate;
     if (updates.purchase_date !== undefined) updateData.purchase_date = updates.purchase_date;
     if (updates.purchase_price !== undefined) updateData.purchase_price = updates.purchase_price;
+    // Enhanced profile fields
+    if (updates.nickname !== undefined) updateData.nickname = updates.nickname;
+    if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.registration_expiry !== undefined) updateData.registration_expiry = updates.registration_expiry;
+    if (updates.inspection_due !== undefined) updateData.inspection_due = updates.inspection_due;
+    if (updates.insurance_provider !== undefined) updateData.insurance_provider = updates.insurance_provider;
+    if (updates.insurance_policy_number !== undefined) updateData.insurance_policy_number = updates.insurance_policy_number;
+    if (updates.insurance_coverage_type !== undefined) updateData.insurance_coverage_type = updates.insurance_coverage_type;
+    if (updates.insurance_expiry !== undefined) updateData.insurance_expiry = updates.insurance_expiry;
+    if (updates.dealer_seller_info !== undefined) updateData.dealer_seller_info = updates.dealer_seller_info;
+    if (updates.loan_details !== undefined) updateData.loan_details = updates.loan_details;
 
     const { data, error } = await supabase
       .from('vehicles')
@@ -362,6 +375,98 @@ export async function searchVehicleByVIN(
     return data;
   } catch (error: any) {
     console.error('Error in searchVehicleByVIN:', error);
+    throw error;
+  }
+}
+
+/**
+ * Add a mileage log entry for a vehicle
+ */
+export async function addMileageLog(
+  vehicleId: string,
+  userId: string,
+  mileage: number,
+  loggedDate: string,
+  notes?: string
+): Promise<MileageLogEntry> {
+  try {
+    const { data, error } = await supabase
+      .from('vehicle_mileage_logs')
+      .insert({ vehicle_id: vehicleId, user_id: userId, mileage, logged_date: loggedDate, notes })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding mileage log:', error);
+      throw new Error(`Failed to add mileage log: ${error.message}`);
+    }
+
+    // Keep current_mileage in sync with the latest entry
+    await supabase
+      .from('vehicles')
+      .update({ current_mileage: mileage, updated_at: new Date().toISOString() })
+      .eq('vehicle_id', vehicleId)
+      .eq('user_id', userId);
+
+    console.log('✅ Mileage log added:', vehicleId, mileage);
+    return data;
+  } catch (error: any) {
+    console.error('Error in addMileageLog:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get mileage log history for a vehicle
+ */
+export async function getMileageLogs(
+  vehicleId: string,
+  userId: string,
+  limit: number = 24
+): Promise<MileageLogEntry[]> {
+  try {
+    const { data, error } = await supabase
+      .from('vehicle_mileage_logs')
+      .select('*')
+      .eq('vehicle_id', vehicleId)
+      .eq('user_id', userId)
+      .order('logged_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      // Table may not exist yet if migration hasn't run
+      if (error.code === '42P01') return [];
+      console.error('Error fetching mileage logs:', error);
+      throw new Error(`Failed to fetch mileage logs: ${error.message}`);
+    }
+
+    return data || [];
+  } catch (error: any) {
+    console.error('Error in getMileageLogs:', error);
+    return [];
+  }
+}
+
+/**
+ * Update the status tag of a vehicle
+ */
+export async function updateVehicleStatus(
+  vehicleId: string,
+  userId: string,
+  status: VehicleStatus
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('vehicles')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('vehicle_id', vehicleId)
+      .eq('user_id', userId);
+
+    if (error) throw new Error(`Failed to update status: ${error.message}`);
+    console.log('✅ Vehicle status updated:', vehicleId, status);
+  } catch (error: any) {
+    console.error('Error in updateVehicleStatus:', error);
     throw error;
   }
 }

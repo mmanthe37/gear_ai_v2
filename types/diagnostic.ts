@@ -109,4 +109,123 @@ export interface DTCAnalysis {
   common_causes: string[];
   symptoms: string[];
   repair_difficulty: 'easy' | 'moderate' | 'difficult' | 'professional';
+  // AI-enhanced fields
+  ai_plain_english?: string;
+  probable_causes_ranked?: Array<{ cause: string; likelihood: 'high' | 'medium' | 'low'; explanation: string }>;
+  diy_vs_shop?: 'diy' | 'shop' | 'either';
+  diy_vs_shop_reasoning?: string;
+}
+
+// ============================================================================
+// HEALTH SCORE
+// ============================================================================
+
+export type HealthSystem = 'engine' | 'brakes' | 'suspension' | 'electrical' | 'fuel' | 'cooling' | 'transmission' | 'exhaust';
+
+export interface HealthSystemScore {
+  system: HealthSystem;
+  label: string;
+  score: number; // 0–100
+  status: 'good' | 'fair' | 'poor' | 'critical';
+  contributing_factors: string[];
+}
+
+export interface VehicleHealthScore {
+  health_id: string;
+  vehicle_id: string;
+  overall_score: number; // 0–100
+  systems: HealthSystemScore[];
+  active_code_count: number;
+  maintenance_compliance_pct: number;
+  calculated_at: string; // ISO timestamp
+  trend: 'improving' | 'stable' | 'declining';
+  previous_score?: number;
+}
+
+// ============================================================================
+// SYMPTOM CHECKER
+// ============================================================================
+
+export interface DiagnosticFlowStep {
+  step: number;
+  instruction: string;
+  check?: string;
+  if_yes?: string;
+  if_no?: string;
+}
+
+export interface SymptomCheck {
+  check_id: string;
+  vehicle_id: string;
+  symptom_text: string;
+  ai_analysis: string;
+  suggested_codes: string[];
+  probable_causes: string[];
+  urgency: 'low' | 'medium' | 'high' | 'critical';
+  related_recalls: string[];
+  related_tsbs: string[];
+  flowchart_steps: DiagnosticFlowStep[];
+  checked_at: string;
+}
+
+// ============================================================================
+// RECALLS & TSBs
+// ============================================================================
+
+export interface RecallAlert {
+  recall_id: string;
+  vehicle_id: string;
+  nhtsa_campaign: string;
+  component: string;
+  summary: string;
+  consequence: string;
+  remedy: string;
+  remedy_url?: string;
+  manufacturer: string;
+  report_date: string;
+  acknowledged: boolean;
+  acknowledged_at?: string;
+}
+
+export interface TSBResult {
+  tsb_id: string;
+  document_id: string;
+  make: string;
+  model: string;
+  year: string;
+  subject: string;
+  summary: string;
+  issue_date?: string;
+  category?: string;
+}
+
+// ============================================================================
+// LIVE OBD DATA
+// ============================================================================
+
+export interface LiveOBDData {
+  rpm: number;
+  vehicle_speed: number; // km/h
+  coolant_temp: number; // °C
+  intake_air_temp: number; // °C
+  throttle_position: number; // %
+  engine_load: number; // %
+  fuel_trim_short: number; // %
+  fuel_trim_long: number; // %
+  o2_voltage_bank1: number; // V
+  o2_voltage_bank2?: number; // V
+  maf_rate: number; // g/s
+  timing_advance: number; // degrees
+  battery_voltage: number; // V
+  timestamp: number;
+}
+
+export interface OBDSessionState {
+  status: 'disconnected' | 'scanning' | 'connecting' | 'connected' | 'error';
+  adapter_name?: string;
+  adapter_id?: string;
+  protocol?: string;
+  error_message?: string;
+  connected_at?: string;
+  live_data?: LiveOBDData;
 }
