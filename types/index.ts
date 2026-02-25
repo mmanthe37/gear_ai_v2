@@ -11,6 +11,7 @@ export * from './user';
 export * from './chat';
 export * from './financial';
 export * from './manual';
+export * from './shell';
 
 // Common utility types
 export interface APIError {

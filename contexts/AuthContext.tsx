@@ -1,18 +1,18 @@
 /**
  * Gear AI CoPilot - Authentication Context
  * 
- * Manages global authentication state and provides auth methods
+ * Manages global authentication state using Supabase Auth
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 import { User, AuthCredentials, SignUpData } from '../types/user';
 import * as authService from '../services/auth-service';
 
 interface AuthContextType {
   user: User | null;
-  firebaseUser: FirebaseUser | null;
+  session: Session | null;
   loading: boolean;
   signIn: (credentials: AuthCredentials) => Promise<void>;
   signUp: (signUpData: SignUpData) => Promise<void>;
@@ -35,42 +35,41 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Listen for Firebase auth state changes
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setFirebaseUser(fbUser);
-      
-      if (fbUser) {
-        // User is signed in, fetch/sync Supabase user data
-        const supabaseUser = await authService.syncUserToSupabase(fbUser);
-        if (supabaseUser) {
-          setUser(supabaseUser);
-        } else {
-          // If Supabase sync fails, keep firebaseUser but log warning
-          console.warn('Failed to sync user to Supabase, but Firebase auth is active');
-          setUser(null);
-        }
-      } else {
-        // User is signed out
-        setUser(null);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      if (s?.user) {
+        authService.getUserById(s.user.id).then(profile => setUser(profile));
       }
-      
       setLoading(false);
     });
 
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, s) => {
+        setSession(s);
+        if (s?.user) {
+          const profile = await authService.getUserById(s.user.id);
+          setUser(profile);
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSignIn = async (credentials: AuthCredentials) => {
     try {
       setLoading(true);
-      const { firebaseUser: fbUser, user: supabaseUser } = await authService.signIn(credentials);
-      setFirebaseUser(fbUser);
-      setUser(supabaseUser);
+      const { user: profile } = await authService.signIn(credentials);
+      setUser(profile);
     } catch (error: any) {
       console.error('Sign in error:', error);
       throw error;
@@ -82,9 +81,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const handleSignUp = async (signUpData: SignUpData) => {
     try {
       setLoading(true);
-      const { firebaseUser: fbUser, user: supabaseUser } = await authService.signUp(signUpData);
-      setFirebaseUser(fbUser);
-      setUser(supabaseUser);
+      const { user: profile } = await authService.signUp(signUpData);
+      setUser(profile);
     } catch (error: any) {
       console.error('Sign up error:', error);
       throw error;
@@ -97,7 +95,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setLoading(true);
       await authService.signOut();
-      setFirebaseUser(null);
+      setSession(null);
       setUser(null);
     } catch (error: any) {
       console.error('Sign out error:', error);
@@ -109,7 +107,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const value: AuthContextType = {
     user,
-    firebaseUser,
+    session,
     loading,
     signIn: handleSignIn,
     signUp: handleSignUp,

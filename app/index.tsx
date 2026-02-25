@@ -1,31 +1,30 @@
-import { useEffect } from 'react';
 import { Redirect } from 'expo-router';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { colors } from '../theme/tokens';
 
 export default function Index() {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#1E90FF" />
+      <View style={styles.loadingState}>
+        <ActivityIndicator size="large" color={colors.brandAccent} />
       </View>
     );
   }
 
   if (!user) {
-    // @ts-ignore - login route is dynamically added
     return <Redirect href="/login" />;
   }
 
-  return <Redirect href="/(tabs)" />;
+  return <Redirect href="/garage" />;
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loadingState: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },

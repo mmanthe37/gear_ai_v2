@@ -1,25 +1,21 @@
-/**
- * Gear AI CoPilot - Login/Sign Up Screen
- * 
- * Authentication screen with Liquid Glass design
- */
-
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
+import GearLogo from '../components/branding/GearLogo';
 import { useAuth } from '../contexts/AuthContext';
-import AnimatedBackground from '../components/AnimatedBackground';
-import GlassCard from '../components/GlassCard';
+import { colors, radii } from '../theme/tokens';
+import { fontFamilies, typeScale } from '../theme/typography';
 
 export default function LoginScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -27,18 +23,17 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { signIn, signUp } = useAuth();
-  const router = useRouter();
 
   const handleSubmit = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert('Error', 'Please enter your email and password.');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert('Error', 'Password must be at least 6 characters.');
       return;
     }
 
@@ -46,123 +41,115 @@ export default function LoginScreen() {
     try {
       if (isSignUp) {
         await signUp({ email, password, display_name: displayName || undefined });
-        Alert.alert('Success', 'Account created successfully!');
+        Alert.alert(
+          'Check your email',
+          'A confirmation link has been sent to ' + email + '. Please confirm your email then sign in.',
+          [{ text: 'OK', onPress: () => setIsSignUp(false) }]
+        );
+        return;
       } else {
         await signIn({ email, password });
       }
-      
-      // Navigate to main app
-      router.replace('/(tabs)');
+      router.replace('/garage');
     } catch (error: any) {
-      Alert.alert(
-        'Authentication Error',
-        error.message || 'An error occurred. Please try again.'
-      );
+      const msg = error?.message || '';
+      if (msg.toLowerCase().includes('email not confirmed')) {
+        Alert.alert('Email not confirmed', 'Please check your inbox and click the confirmation link before signing in.');
+      } else {
+        Alert.alert('Authentication Error', msg || 'Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const toggleMode = () => {
-    setIsSignUp(!isSignUp);
-    setDisplayName('');
-  };
-
   return (
     <View style={styles.container}>
-      <AnimatedBackground />
-      
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
       >
-        <View style={styles.content}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Gear AI CoPilot</Text>
-            <Text style={styles.subtitle}>
-              {isSignUp ? 'Create Your Account' : 'Welcome Back'}
-            </Text>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.hero}>
+            <GearLogo variant="full" size="lg" />
+            <Text style={styles.heroTitle}>Automotive Intelligence Platform</Text>
+            <Text style={styles.heroSubtitle}>Clean, powerful assistance for every vehicle decision.</Text>
           </View>
 
-          {/* Form Card */}
-          <GlassCard style={styles.formCard}>
-            <View style={styles.form}>
-              {isSignUp && (
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Display Name (Optional)</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="John Doe"
-                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                    value={displayName}
-                    onChangeText={setDisplayName}
-                    autoCapitalize="words"
-                  />
-                </View>
-              )}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{isSignUp ? 'Create Account' : 'Sign In'}</Text>
 
+            {isSignUp && (
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>Display Name</Text>
                 <TextInput
+                  value={displayName}
+                  onChangeText={setDisplayName}
                   style={styles.input}
-                  placeholder="you@example.com"
-                  placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoComplete="email"
+                  autoCapitalize="words"
+                  placeholder="Alex Driver"
+                  placeholderTextColor={colors.textSecondary}
                 />
               </View>
+            )}
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="••••••••"
-                  placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoComplete="password"
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
-                onPress={handleSubmit}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.submitButtonText}>
-                    {isSignUp ? 'Sign Up' : 'Sign In'}
-                  </Text>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.toggleButton}
-                onPress={toggleMode}
-                disabled={isLoading}
-              >
-                <Text style={styles.toggleButtonText}>
-                  {isSignUp
-                    ? 'Already have an account? Sign In'
-                    : "Don't have an account? Sign Up"}
-                </Text>
-              </TouchableOpacity>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                style={styles.input}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                placeholder="you@example.com"
+                placeholderTextColor={colors.textSecondary}
+              />
             </View>
-          </GlassCard>
 
-          {/* Info */}
-          <Text style={styles.infoText}>
-            Secure authentication powered by Firebase
-          </Text>
-        </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                style={styles.input}
+                autoCapitalize="none"
+                secureTextEntry
+                autoComplete="password"
+                placeholder="password"
+                placeholderTextColor={colors.textSecondary}
+              />
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.submitButton,
+                pressed && styles.buttonInteraction,
+                isLoading && styles.buttonDisabled,
+              ]}
+              onPress={handleSubmit}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={colors.background} />
+              ) : (
+                <Text style={styles.submitButtonText}>{isSignUp ? 'Create Account' : 'Sign In'}</Text>
+              )}
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.toggle, pressed && styles.buttonInteraction]}
+              onPress={() => setIsSignUp((prev) => !prev)}
+              disabled={isLoading}
+            >
+              <Text style={styles.toggleText}>
+                {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+              </Text>
+            </Pressable>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
@@ -171,85 +158,101 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
   },
   keyboardView: {
     flex: 1,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    minHeight: '100%',
     justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 30,
+    gap: 22,
   },
-  header: {
+  hero: {
     alignItems: 'center',
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.7)',
-    textAlign: 'center',
-  },
-  formCard: {
-    marginBottom: 24,
-  },
-  form: {
-    gap: 20,
-  },
-  inputGroup: {
     gap: 8,
   },
+  heroTitle: {
+    color: colors.textPrimary,
+    fontSize: typeScale.lg,
+    fontFamily: fontFamilies.heading,
+    textAlign: 'center',
+  },
+  heroSubtitle: {
+    color: colors.textSecondary,
+    fontSize: typeScale.sm,
+    fontFamily: fontFamilies.body,
+    textAlign: 'center',
+    maxWidth: 420,
+  },
+  card: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    padding: 18,
+    gap: 14,
+    maxWidth: 520,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  cardTitle: {
+    color: colors.textPrimary,
+    fontSize: typeScale.xl,
+    fontFamily: fontFamilies.heading,
+  },
+  inputGroup: {
+    gap: 6,
+  },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-    marginLeft: 4,
+    color: colors.textSecondary,
+    fontSize: typeScale.sm,
+    fontFamily: fontFamilies.body,
   },
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#fff',
+    minHeight: 44,
     borderWidth: 1,
-    borderColor: 'rgba(30, 144, 255, 0.3)',
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textPrimary,
+    paddingHorizontal: 12,
+    fontFamily: fontFamilies.body,
+    fontSize: typeScale.md,
   },
   submitButton: {
-    backgroundColor: 'rgba(30, 144, 255, 0.8)',
-    borderRadius: 12,
-    padding: 16,
+    minHeight: 44,
+    borderRadius: radii.md,
+    backgroundColor: colors.brandAccent,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(30, 144, 255, 0.5)',
-  },
-  submitButtonDisabled: {
-    opacity: 0.5,
+    marginTop: 6,
   },
   submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: colors.background,
+    fontFamily: fontFamilies.heading,
+    fontSize: typeScale.sm,
   },
-  toggleButton: {
+  toggle: {
+    minHeight: 44,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 12,
+    backgroundColor: colors.surfaceAlt,
   },
-  toggleButtonText: {
-    color: 'rgba(30, 144, 255, 0.9)',
-    fontSize: 14,
-    fontWeight: '600',
+  toggleText: {
+    color: colors.textSecondary,
+    fontFamily: fontFamilies.body,
+    fontSize: typeScale.sm,
   },
-  infoText: {
-    textAlign: 'center',
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 12,
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonInteraction: {
+    opacity: 0.92,
   },
 });

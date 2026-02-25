@@ -25,14 +25,15 @@ import {
   getRecalls,
   findIndexedManual,
 } from './manual-retrieval';
+import Constants from 'expo-constants';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const OPENAI_CHAT_URL = 'https://api.openai.com/v1/chat/completions';
-const DEFAULT_MODEL = 'gpt-4-turbo-preview';
-const FALLBACK_MODEL = 'gpt-3.5-turbo';
+const DEFAULT_MODEL = 'gpt-4.1-mini';
+const FALLBACK_MODEL = 'gpt-4.1-mini';
 
 // ---------------------------------------------------------------------------
 // System prompts
@@ -99,7 +100,7 @@ function buildRecallContext(
 export async function generateAIResponse(
   request: AIRequest
 ): Promise<AIResponse> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = Constants.expoConfig?.extra?.openaiApiKey || process.env.OPENAI_API_KEY;
 
   // If no API key, fall back to intelligent template response
   if (!apiKey) {

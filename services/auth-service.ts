@@ -1,357 +1,131 @@
 /**
  * Gear AI CoPilot - Authentication Service
  * 
- * Handles Firebase Authentication and syncs user data with Supabase
+ * Handles Supabase Auth (email/password) and syncs user profile to public.users
  */
 
-import { 
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  User as FirebaseUser,
-  UserCredential
-} from 'firebase/auth';
-import { auth } from '../lib/firebase';
 import { supabase } from '../lib/supabase';
 import { User, SignUpData, AuthCredentials } from '../types/user';
 
 /**
- * Create or update user record in Supabase when Firebase user is created/authenticated
- */
-export async function syncUserToSupabase(firebaseUser: FirebaseUser): Promise<User | null> {
-  try {
-    const { data: existingUser, error: fetchError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('firebase_uid', firebaseUser.uid)
-      .single();
-
-    if (existingUser && !fetchError) {
-      // Update last login
-      const { data: updatedUser, error: updateError } = await supabase
-        .from('users')
-        .update({ last_login_at: new Date().toISOString() })
-        .eq('firebase_uid', firebaseUser.uid)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error('Error updating user login time:', updateError);
-        return existingUser;
-      }
-
-      return updatedUser;
-    }
-
-    // Create new user in Supabase
-    const newUser = {
-      firebase_uid: firebaseUser.uid,
-      email: firebaseUser.email || '',
-      display_name: firebaseUser.displayName || undefined,
-      avatar_url: firebaseUser.photoURL || undefined,
-      tier: 'free' as const,
-      subscription_status: 'none' as const,
-      last_login_at: new Date().toISOString(),
-      preferences: {},
-    };
-
-    const { data: createdUser, error: createError } = await supabase
-      .from('users')
-      .insert(newUser)
-      .select()
-      .single();
-
-    if (createError) {
-      console.error('Error creating user in Supabase:', createError);
-      throw createError;
-    }
-
-    console.log('✅ User synced to Supabase:', createdUser);
-    return createdUser;
-  } catch (error) {
-    console.error('Error syncing user to Supabase:', error);
-    return null;
-  }
-}
-
-/**
  * Sign up a new user with email and password
  */
-export async function signUp(signUpData: SignUpData): Promise<{ firebaseUser: FirebaseUser; user: User | null }> {
-  try {
-    const { email, password, display_name } = signUpData;
-    
-    // Ensure Firebase Auth is initialized
-    if (!auth) {
-      throw new Error('Firebase Auth not initialized');
-    }
-    
-    // Create user in Firebase
-    const userCredential: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const firebaseUser = userCredential.user;
+export async function signUp(signUpData: SignUpData): Promise<{ user: User | null }> {
+  const { email, password, display_name } = signUpData;
 
-    // Update display name if provided
-    if (display_name) {
-      const { updateProfile } = await import('firebase/auth');
-      await updateProfile(firebaseUser, { displayName: display_name });
-    }
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { display_name } },
+  });
 
-    // Sync to Supabase
-    const supabaseUser = await syncUserToSupabase(firebaseUser);
+  if (authError) throw new Error(authError.message);
+  if (!authData.user) throw new Error('Sign up failed');
 
-    return { firebaseUser, user: supabaseUser };
-  } catch (error: any) {
-    console.error('Sign up error:', error);
-    throw new Error(error.message || 'Failed to sign up');
+  // Create user profile in public.users
+  const { data: userProfile, error: profileError } = await supabase
+    .from('users')
+    .insert({
+      user_id: authData.user.id,
+      email: authData.user.email || '',
+      display_name: display_name || null,
+      tier: 'free',
+      subscription_status: 'none',
+      last_login_at: new Date().toISOString(),
+      preferences: {},
+    })
+    .select()
+    .single();
+
+  if (profileError) {
+    console.error('Error creating user profile:', profileError);
   }
+
+  return { user: userProfile || null };
 }
 
 /**
  * Sign in an existing user with email and password
  */
-export async function signIn(credentials: AuthCredentials): Promise<{ firebaseUser: FirebaseUser; user: User | null }> {
-  try {
-    const { email, password } = credentials;
-    
-    // Ensure Firebase Auth is initialized
-    if (!auth) {
-      throw new Error('Firebase Auth not initialized');
-    }
-    
-    // Sign in with Firebase
-    const userCredential: UserCredential = await signInWithEmailAndPassword(auth, email, password);
-    const firebaseUser = userCredential.user;
+export async function signIn(credentials: AuthCredentials): Promise<{ user: User | null }> {
+  const { email, password } = credentials;
 
-    // Sync to Supabase (updates last_login_at)
-    const supabaseUser = await syncUserToSupabase(firebaseUser);
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(error.message);
 
-    return { firebaseUser, user: supabaseUser };
-  } catch (error: any) {
-    console.error('Sign in error:', error);
-    throw new Error(error.message || 'Failed to sign in');
+  // Fetch user profile
+  const { data: userProfile } = await supabase
+    .from('users')
+    .select('*')
+    .eq('user_id', data.user.id)
+    .single();
+
+  // Update last_login_at
+  if (userProfile) {
+    await supabase
+      .from('users')
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('user_id', data.user.id);
   }
+
+  return { user: userProfile || null };
 }
 
 /**
  * Sign out the current user
  */
 export async function signOut(): Promise<void> {
-  try {
-    // Ensure Firebase Auth is initialized
-    if (!auth) {
-      throw new Error('Firebase Auth not initialized');
-    }
-    
-    await firebaseSignOut(auth);
-    console.log('✅ User signed out');
-  } catch (error: any) {
-    console.error('Sign out error:', error);
-    throw new Error(error.message || 'Failed to sign out');
-  }
+  const { error } = await supabase.auth.signOut();
+  if (error) throw new Error(error.message);
 }
 
 /**
- * Get user data from Supabase by Firebase UID
+ * Get current Supabase session
  */
-export async function getUserByFirebaseUid(firebaseUid: string): Promise<User | null> {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('firebase_uid', firebaseUid)
-      .single();
-
-    if (error) {
-      console.error('Error fetching user from Supabase:', error);
-      return null;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error in getUserByFirebaseUid:', error);
-    return null;
-  }
+export async function getSession() {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session;
 }
 
 /**
  * Send password reset email
  */
 export async function sendPasswordResetEmail(email: string): Promise<void> {
-  try {
-    if (!auth) {
-      throw new Error('Firebase Auth not initialized');
-    }
-
-    const { sendPasswordResetEmail: sendReset } = await import('firebase/auth');
-    await sendReset(auth, email);
-    console.log('✅ Password reset email sent to:', email);
-  } catch (error: any) {
-    console.error('Send password reset error:', error);
-    throw new Error(error.message || 'Failed to send password reset email');
-  }
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  if (error) throw new Error(error.message);
 }
 
 /**
- * Update user profile (display name, avatar)
+ * Get user profile by Supabase user ID
+ */
+export async function getUserById(userId: string): Promise<User | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching user:', error);
+    return null;
+  }
+  return data;
+}
+
+/**
+ * Update user profile
  */
 export async function updateUserProfile(
-  firebaseUid: string,
-  updates: {
-    display_name?: string;
-    avatar_url?: string;
-  }
+  userId: string,
+  updates: { display_name?: string; avatar_url?: string }
 ): Promise<User | null> {
-  try {
-    // Update Firebase profile if display name is being updated
-    if (updates.display_name && auth.currentUser) {
-      const { updateProfile } = await import('firebase/auth');
-      await updateProfile(auth.currentUser, {
-        displayName: updates.display_name,
-      });
-    }
+  const { data, error } = await supabase
+    .from('users')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .select()
+    .single();
 
-    // Update Supabase user record
-    const updateData: any = {
-      updated_at: new Date().toISOString(),
-    };
-
-    if (updates.display_name !== undefined) {
-      updateData.display_name = updates.display_name;
-    }
-    if (updates.avatar_url !== undefined) {
-      updateData.avatar_url = updates.avatar_url;
-    }
-
-    const { data, error } = await supabase
-      .from('users')
-      .update(updateData)
-      .eq('firebase_uid', firebaseUid)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating user profile:', error);
-      throw new Error(`Failed to update profile: ${error.message}`);
-    }
-
-    console.log('✅ User profile updated:', firebaseUid);
-    return data;
-  } catch (error: any) {
-    console.error('Error in updateUserProfile:', error);
-    throw error;
-  }
-}
-
-/**
- * Update user preferences
- */
-export async function updateUserPreferences(
-  firebaseUid: string,
-  preferences: Record<string, any>
-): Promise<void> {
-  try {
-    const { data: currentUser, error: fetchError } = await supabase
-      .from('users')
-      .select('preferences')
-      .eq('firebase_uid', firebaseUid)
-      .single();
-
-    if (fetchError) {
-      throw new Error(`Failed to fetch user: ${fetchError.message}`);
-    }
-
-    const updatedPreferences = {
-      ...(currentUser.preferences || {}),
-      ...preferences,
-    };
-
-    const { error } = await supabase
-      .from('users')
-      .update({
-        preferences: updatedPreferences,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('firebase_uid', firebaseUid);
-
-    if (error) {
-      console.error('Error updating user preferences:', error);
-      throw new Error(`Failed to update preferences: ${error.message}`);
-    }
-
-    console.log('✅ User preferences updated:', firebaseUid);
-  } catch (error: any) {
-    console.error('Error in updateUserPreferences:', error);
-    throw error;
-  }
-}
-
-/**
- * Delete user account (GDPR compliance)
- */
-export async function deleteUserAccount(firebaseUid: string): Promise<void> {
-  try {
-    // Delete from Supabase (this will cascade delete all related data)
-    const { error: supabaseError } = await supabase
-      .from('users')
-      .delete()
-      .eq('firebase_uid', firebaseUid);
-
-    if (supabaseError) {
-      console.error('Error deleting user from Supabase:', supabaseError);
-      throw new Error(`Failed to delete user data: ${supabaseError.message}`);
-    }
-
-    // Delete from Firebase Auth
-    if (auth.currentUser && auth.currentUser.uid === firebaseUid) {
-      await auth.currentUser.delete();
-      console.log('✅ User account deleted:', firebaseUid);
-    } else {
-      console.warn('Cannot delete Firebase user - not current user');
-    }
-  } catch (error: any) {
-    console.error('Error in deleteUserAccount:', error);
-    throw error;
-  }
-}
-
-/**
- * Verify email address
- */
-export async function sendEmailVerification(): Promise<void> {
-  try {
-    if (!auth.currentUser) {
-      throw new Error('No user is signed in');
-    }
-
-    const { sendEmailVerification: sendVerification } = await import('firebase/auth');
-    await sendVerification(auth.currentUser);
-    console.log('✅ Verification email sent');
-  } catch (error: any) {
-    console.error('Send email verification error:', error);
-    throw new Error(error.message || 'Failed to send verification email');
-  }
-}
-
-/**
- * Check if email is verified
- */
-export function isEmailVerified(): boolean {
-  return auth.currentUser?.emailVerified || false;
-}
-
-/**
- * Reload user data from Firebase
- */
-export async function reloadUser(): Promise<void> {
-  try {
-    if (!auth.currentUser) {
-      throw new Error('No user is signed in');
-    }
-
-    await auth.currentUser.reload();
-    console.log('✅ User data reloaded');
-  } catch (error: any) {
-    console.error('Reload user error:', error);
-    throw error;
-  }
+  if (error) throw new Error(`Failed to update profile: ${error.message}`);
+  return data;
 }

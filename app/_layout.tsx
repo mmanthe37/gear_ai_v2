@@ -1,26 +1,43 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { AuthProvider } from '../contexts/AuthContext';
+import { AppShellProvider } from '../contexts/AppShellContext';
+import { colors } from '../theme/tokens';
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Orbitron: require('../assets/fonts/Orbitron-VariableFont_wght.ttf'),
+    Manrope: require('../assets/fonts/Manrope-VariableFont_wght.ttf'),
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={colors.brandAccent} />
+      </View>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <StatusBar style="light" />
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen 
-            name="chat/[id]" 
-            options={{ 
-              presentation: 'modal',
-              headerStyle: { backgroundColor: '#007AFF' },
-              headerTintColor: '#fff',
-            }} 
-          />
-        </Stack>
+        <AppShellProvider>
+          <StatusBar style="light" />
+          <Stack screenOptions={{ headerShown: false }} />
+        </AppShellProvider>
       </AuthProvider>
     </ErrorBoundary>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+});

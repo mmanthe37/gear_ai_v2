@@ -335,9 +335,8 @@ CREATE TABLE public.api_requests (
 
 CREATE INDEX idx_api_requests_user_timestamp ON public.api_requests(user_id, timestamp DESC);
 
--- Auto-cleanup old API requests (older than 24 hours)
-CREATE INDEX idx_api_requests_cleanup ON public.api_requests(timestamp) 
-  WHERE timestamp < NOW() - INTERVAL '24 hours';
+-- Index for timestamp-based queries on API requests
+CREATE INDEX idx_api_requests_cleanup ON public.api_requests(timestamp);
 
 -- ============================================================================
 -- FUNCTIONS

@@ -17,18 +17,13 @@ export {
 
 // Authentication & User Management
 export {
-  syncUserToSupabase,
   signUp,
   signIn,
   signOut,
-  getUserByFirebaseUid,
+  getSession,
   sendPasswordResetEmail,
   updateUserProfile,
-  updateUserPreferences,
-  deleteUserAccount,
-  sendEmailVerification,
-  isEmailVerified,
-  reloadUser,
+  getUserById,
 } from './auth-service';
 
 // VIN decoding (NHTSA vPIC)

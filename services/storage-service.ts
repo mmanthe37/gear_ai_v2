@@ -185,7 +185,12 @@ export async function listFiles(
       throw new Error(`Failed to list files: ${error.message}`);
     }
 
-    return data || [];
+    return (data || []).map(file => ({
+      name: file.name,
+      id: file.id || '',
+      updated_at: file.updated_at || '',
+      size: file.metadata?.size || 0
+    }));
   } catch (error: any) {
     console.error('Error in listFiles:', error);
     throw error;

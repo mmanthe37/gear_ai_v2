@@ -6,7 +6,7 @@
 
 export interface User {
   user_id: string;
-  firebase_uid: string;
+  firebase_uid?: string; // Legacy — no longer required (Supabase Auth used instead)
   email: string;
   display_name?: string;
   avatar_url?: string;

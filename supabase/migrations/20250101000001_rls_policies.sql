@@ -20,29 +20,82 @@ ALTER TABLE public.service_reminders ENABLE ROW LEVEL SECURITY;
 -- Audit log is admin-only
 
 -- ============================================================================
+-- HELPER FUNCTIONS (defined before policies that reference them)
+-- ============================================================================
+
+-- Returns the Supabase Auth user UUID (auth.uid() alias for readability)
+CREATE OR REPLACE FUNCTION get_authenticated_user_id()
+RETURNS UUID AS $$
+BEGIN
+  RETURN auth.uid();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+-- Function to check if user owns a vehicle
+CREATE OR REPLACE FUNCTION user_owns_vehicle(p_vehicle_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.vehicles v
+    WHERE v.vehicle_id = p_vehicle_id AND v.user_id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get user's subscription tier
+CREATE OR REPLACE FUNCTION get_user_tier()
+RETURNS VARCHAR AS $$
+BEGIN
+  RETURN (
+    SELECT tier FROM public.users WHERE user_id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to check tier-based vehicle limits
+CREATE OR REPLACE FUNCTION can_add_vehicle()
+RETURNS BOOLEAN AS $$
+DECLARE
+  user_tier VARCHAR;
+  vehicle_count INT;
+BEGIN
+  user_tier := get_user_tier();
+  vehicle_count := (
+    SELECT COUNT(*) FROM public.vehicles
+    WHERE user_id = auth.uid() AND is_active = true
+  );
+  RETURN CASE
+    WHEN user_tier = 'free' THEN vehicle_count < 1
+    WHEN user_tier = 'pro' THEN vehicle_count < 3
+    ELSE true
+  END;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================================
 -- USERS TABLE POLICIES
 -- ============================================================================
 
 -- Users can view their own profile
 CREATE POLICY "Users can view their own profile"
   ON public.users FOR SELECT
-  USING (auth.uid() = firebase_uid);
+  USING (user_id = auth.uid());
 
 -- Users can update their own profile (except tier and subscription fields)
 CREATE POLICY "Users can update their own profile"
   ON public.users FOR UPDATE
-  USING (auth.uid() = firebase_uid)
+  USING (user_id = auth.uid())
   WITH CHECK (
-    auth.uid() = firebase_uid AND
+    user_id = auth.uid() AND
     -- Prevent users from changing their tier or subscription status
-    tier = (SELECT tier FROM public.users WHERE firebase_uid = auth.uid()) AND
-    subscription_status = (SELECT subscription_status FROM public.users WHERE firebase_uid = auth.uid())
+    tier = (SELECT tier FROM public.users WHERE user_id = auth.uid()) AND
+    subscription_status = (SELECT subscription_status FROM public.users WHERE user_id = auth.uid())
   );
 
--- Users are created via Firebase Auth sync (service role only)
-CREATE POLICY "Service role can insert users"
+-- Users can insert their own profile after Supabase Auth sign-up
+CREATE POLICY "Users can insert their own profile"
   ON public.users FOR INSERT
-  WITH CHECK (auth.jwt()->>'role' = 'service_role');
+  WITH CHECK (user_id = auth.uid());
 
 -- ============================================================================
 -- VEHICLES TABLE POLICIES
@@ -78,7 +131,7 @@ CREATE POLICY "Users can view their vehicle maintenance"
   USING (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -88,7 +141,7 @@ CREATE POLICY "Users can insert maintenance for their vehicles"
   WITH CHECK (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -98,7 +151,7 @@ CREATE POLICY "Users can update their maintenance records"
   USING (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -108,7 +161,7 @@ CREATE POLICY "Users can delete their maintenance records"
   USING (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -122,7 +175,7 @@ CREATE POLICY "Users can view their vehicle finances"
   USING (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -132,7 +185,7 @@ CREATE POLICY "Users can insert financial accounts for their vehicles"
   WITH CHECK (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -142,7 +195,7 @@ CREATE POLICY "Users can update their financial accounts"
   USING (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -152,7 +205,7 @@ CREATE POLICY "Users can delete their financial accounts"
   USING (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -166,7 +219,7 @@ CREATE POLICY "Users can view their vehicle diagnostics"
   USING (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -176,7 +229,7 @@ CREATE POLICY "Users can insert diagnostics for their vehicles"
   WITH CHECK (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -186,7 +239,7 @@ CREATE POLICY "Users can update their diagnostic codes"
   USING (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -196,7 +249,7 @@ CREATE POLICY "Users can delete their diagnostic codes"
   USING (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -234,7 +287,7 @@ CREATE POLICY "Users can view messages in their sessions"
   USING (
     session_id IN (
       SELECT session_id FROM public.chat_sessions 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -244,7 +297,7 @@ CREATE POLICY "Users can insert messages in their sessions"
   WITH CHECK (
     session_id IN (
       SELECT session_id FROM public.chat_sessions 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -255,7 +308,7 @@ CREATE POLICY "Users can delete messages in their sessions"
   USING (
     session_id IN (
       SELECT session_id FROM public.chat_sessions 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -269,7 +322,7 @@ CREATE POLICY "Users can view their vehicle reminders"
   USING (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -279,7 +332,7 @@ CREATE POLICY "Users can insert reminders for their vehicles"
   WITH CHECK (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -289,7 +342,7 @@ CREATE POLICY "Users can update their reminders"
   USING (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -299,7 +352,7 @@ CREATE POLICY "Users can delete their reminders"
   USING (
     vehicle_id IN (
       SELECT vehicle_id FROM public.vehicles 
-      WHERE user_id = (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid())
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -326,67 +379,6 @@ CREATE POLICY "Service role can cleanup old API requests"
     auth.jwt()->>'role' = 'service_role' AND
     timestamp < NOW() - INTERVAL '24 hours'
   );
-
--- ============================================================================
--- HELPER FUNCTIONS FOR RLS
--- ============================================================================
-
--- Function to get user_id from authenticated user's firebase_uid
--- This improves performance by caching the result and makes RLS policies more readable
-CREATE OR REPLACE FUNCTION get_authenticated_user_id()
-RETURNS UUID AS $$
-BEGIN
-  RETURN (SELECT user_id FROM public.users WHERE firebase_uid = auth.uid());
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
-
--- Function to check if user owns a vehicle
-CREATE OR REPLACE FUNCTION user_owns_vehicle(p_vehicle_id UUID)
-RETURNS BOOLEAN AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.vehicles v
-    INNER JOIN public.users u ON v.user_id = u.user_id
-    WHERE v.vehicle_id = p_vehicle_id AND u.firebase_uid = auth.uid()
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function to get user's subscription tier
-CREATE OR REPLACE FUNCTION get_user_tier()
-RETURNS VARCHAR AS $$
-BEGIN
-  RETURN (
-    SELECT tier FROM public.users WHERE firebase_uid = auth.uid()
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function to check tier-based vehicle limits
-CREATE OR REPLACE FUNCTION can_add_vehicle()
-RETURNS BOOLEAN AS $$
-DECLARE
-  user_tier VARCHAR;
-  vehicle_count INT;
-BEGIN
-  -- Get user tier
-  user_tier := get_user_tier();
-  
-  -- Count current vehicles
-  vehicle_count := (
-    SELECT COUNT(*) FROM public.vehicles v
-    INNER JOIN public.users u ON v.user_id = u.user_id
-    WHERE u.firebase_uid = auth.uid() AND v.is_active = true
-  );
-  
-  -- Check limits
-  RETURN CASE
-    WHEN user_tier = 'free' THEN vehicle_count < 1
-    WHEN user_tier = 'pro' THEN vehicle_count < 3
-    ELSE true -- mechanic and dealer have unlimited
-  END;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================================
 -- COMMENTS
