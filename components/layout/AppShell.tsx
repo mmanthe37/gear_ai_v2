@@ -16,7 +16,8 @@ import { useAppShell } from '../../contexts/AppShellContext';
 import type { SidebarChatItem, SidebarVehicleItem } from '../../types/shell';
 import { getUserChatSessions } from '../../services/chat-service';
 import { getUserVehicles } from '../../services/vehicle-service';
-import { colors, radii, shell } from '../../theme/tokens';
+import { radii, shell } from '../../theme/tokens';
+import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
 import GearLogo from '../branding/GearLogo';
 import GearActionIcon from '../branding/GearActionIcon';
@@ -31,6 +32,7 @@ function formatDate(iso?: string): string | undefined {
 }
 
 export default function AppShell({ routeKey, title, subtitle, children }: AppShellProps) {
+  const { colors } = useTheme();
   const pathname = usePathname();
   const { width } = useWindowDimensions();
   const { user, loading } = useAuth();
@@ -100,6 +102,117 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
     [isSidebarCollapsed]
   );
   const showHeaderWordmark = isDesktop || width >= 860;
+
+  const styles = StyleSheet.create({
+    root: {
+      flex: 1,
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+    },
+    loadingState: {
+      flex: 1,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingLogo: {
+      marginBottom: 14,
+    },
+    persistentSidebar: {
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    main: {
+      flex: 1,
+    },
+    header: {
+      minHeight: shell.headerHeight,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: 'rgba(18, 26, 35, 0.92)',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      gap: 12,
+    },
+    iconButton: {
+      minWidth: 44,
+      minHeight: 44,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitleArea: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    headerCopy: {
+      flex: 1,
+      minWidth: 0,
+    },
+    pageTitle: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.heading,
+      fontSize: typeScale.lg,
+    },
+    pageSubtitle: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+      marginTop: 2,
+    },
+    accountButton: {
+      minHeight: 44,
+      maxWidth: 240,
+      borderRadius: radii.full,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    accountButtonLabel: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
+    body: {
+      flex: 1,
+      minHeight: 0,
+    },
+    buttonInteraction: {
+      opacity: 0.92,
+    },
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.overlay,
+      zIndex: 30,
+    },
+    mobileSidebar: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      left: 0,
+      zIndex: 40,
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    mobileLoadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(11, 17, 23, 0.35)',
+    },
+  });
 
   if (loading) {
     return (
@@ -212,113 +325,3 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: colors.background,
-  },
-  loadingState: {
-    flex: 1,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingLogo: {
-    marginBottom: 14,
-  },
-  persistentSidebar: {
-    borderRightWidth: 1,
-    borderRightColor: colors.border,
-  },
-  main: {
-    flex: 1,
-  },
-  header: {
-    minHeight: shell.headerHeight,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: 'rgba(18, 26, 35, 0.92)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  iconButton: {
-    minWidth: 44,
-    minHeight: 44,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitleArea: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  headerCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  pageTitle: {
-    color: colors.textPrimary,
-    fontFamily: fontFamilies.heading,
-    fontSize: typeScale.lg,
-  },
-  pageSubtitle: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.xs,
-    marginTop: 2,
-  },
-  accountButton: {
-    minHeight: 44,
-    maxWidth: 240,
-    borderRadius: radii.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  accountButtonLabel: {
-    color: colors.textPrimary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-  },
-  body: {
-    flex: 1,
-    minHeight: 0,
-  },
-  buttonInteraction: {
-    opacity: 0.92,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.overlay,
-    zIndex: 30,
-  },
-  mobileSidebar: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    zIndex: 40,
-    borderRightWidth: 1,
-    borderRightColor: colors.border,
-  },
-  mobileLoadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(11, 17, 23, 0.35)',
-  },
-});

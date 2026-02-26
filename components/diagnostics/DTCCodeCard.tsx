@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import GearActionIcon from '../branding/GearActionIcon';
-import { colors, radii } from '../../theme/tokens';
+import { radii } from '../../theme/tokens';
+import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
 import type { DiagnosticCode, DTCAnalysis } from '../../types/diagnostic';
 
@@ -12,20 +13,6 @@ interface Props {
   analysis?: DTCAnalysis | null;
 }
 
-const severityColor: Record<DiagnosticCode['severity'], string> = {
-  critical: '#DC2626',
-  high: colors.danger,
-  medium: colors.warning,
-  low: colors.success,
-};
-
-const statusColor: Record<DiagnosticCode['status'], string> = {
-  active: colors.danger,
-  pending: colors.warning,
-  resolved: colors.success,
-  false_positive: colors.textSecondary,
-};
-
 function formatDate(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -35,6 +22,66 @@ function formatDate(iso: string): string {
 }
 
 export default function DTCCodeCard({ code, onAnalyze, onResolve, analysis: propAnalysis }: Props) {
+  const { colors } = useTheme();
+
+  const severityColor: Record<DiagnosticCode['severity'], string> = {
+    critical: '#DC2626',
+    high: colors.danger,
+    medium: colors.warning,
+    low: colors.success,
+  };
+
+  const statusColor: Record<DiagnosticCode['status'], string> = {
+    active: colors.danger,
+    pending: colors.warning,
+    resolved: colors.success,
+    false_positive: colors.textSecondary,
+  };
+
+  const styles = StyleSheet.create({
+    card: {
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderLeftWidth: 3,
+      borderRadius: radii.md,
+      padding: 12,
+      gap: 6,
+    },
+    header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+    headerLeft: { flex: 1, gap: 6 },
+    codeText: { fontFamily: fontFamilies.heading, fontSize: typeScale.xl },
+    badges: { flexDirection: 'row', gap: 6 },
+    badge: { borderWidth: 1, borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 2 },
+    badgeText: { fontFamily: fontFamilies.body, fontSize: 10, textTransform: 'uppercase' },
+    chevron: { color: colors.textSecondary, fontSize: 10, marginTop: 4 },
+    description: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+    meta: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+    expandedBody: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, marginTop: 6, gap: 14 },
+    section: { gap: 8 },
+    sectionLabel: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 1 },
+    ffGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    ffCell: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, paddingHorizontal: 8, paddingVertical: 4, minWidth: '30%' },
+    ffKey: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: 10, textTransform: 'uppercase' },
+    ffVal: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
+    aiText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, lineHeight: 20 },
+    subsection: { gap: 8 },
+    subLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
+    causeRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+    likelihoodDot: { width: 8, height: 8, borderRadius: 4, marginTop: 5, flexShrink: 0 },
+    causeName: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+    causeExp: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, lineHeight: 16 },
+    costRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+    costItem: { flex: 1, minWidth: '28%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, padding: 8, gap: 2 },
+    costLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: 10, textTransform: 'uppercase' },
+    costValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
+    analyzeBtn: { backgroundColor: colors.brandAccent, borderRadius: radii.md, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
+    analyzeBtnContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    analyzeBtnText: { color: '#000', fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
+    resolveBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, minHeight: 38, alignItems: 'center', justifyContent: 'center' },
+    resolveBtnText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+  });
+
   const [expanded, setExpanded] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [resolving, setResolving] = useState(false);
@@ -194,46 +241,3 @@ export default function DTCCodeCard({ code, onAnalyze, onResolve, analysis: prop
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderLeftWidth: 3,
-    borderRadius: radii.md,
-    padding: 12,
-    gap: 6,
-  },
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  headerLeft: { flex: 1, gap: 6 },
-  codeText: { fontFamily: fontFamilies.heading, fontSize: typeScale.xl },
-  badges: { flexDirection: 'row', gap: 6 },
-  badge: { borderWidth: 1, borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 2 },
-  badgeText: { fontFamily: fontFamilies.body, fontSize: 10, textTransform: 'uppercase' },
-  chevron: { color: colors.textSecondary, fontSize: 10, marginTop: 4 },
-  description: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  meta: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-  expandedBody: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, marginTop: 6, gap: 14 },
-  section: { gap: 8 },
-  sectionLabel: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 1 },
-  ffGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  ffCell: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, paddingHorizontal: 8, paddingVertical: 4, minWidth: '30%' },
-  ffKey: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: 10, textTransform: 'uppercase' },
-  ffVal: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-  aiText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, lineHeight: 20 },
-  subsection: { gap: 8 },
-  subLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
-  causeRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
-  likelihoodDot: { width: 8, height: 8, borderRadius: 4, marginTop: 5, flexShrink: 0 },
-  causeName: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  causeExp: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, lineHeight: 16 },
-  costRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  costItem: { flex: 1, minWidth: '28%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, padding: 8, gap: 2 },
-  costLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: 10, textTransform: 'uppercase' },
-  costValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-  analyzeBtn: { backgroundColor: colors.brandAccent, borderRadius: radii.md, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
-  analyzeBtnContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  analyzeBtnText: { color: '#000', fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-  resolveBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, minHeight: 38, alignItems: 'center', justifyContent: 'center' },
-  resolveBtnText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-});

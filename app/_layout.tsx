@@ -6,7 +6,8 @@ import GearLogo from '../components/branding/GearLogo';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { AuthProvider } from '../contexts/AuthContext';
 import { AppShellProvider } from '../contexts/AppShellContext';
-import { colors } from '../theme/tokens';
+import { ThemeProvider } from '../contexts/ThemeContext';
+import { darkColors as colors } from '../theme/tokens';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -14,23 +15,23 @@ export default function RootLayout() {
     Manrope: require('../assets/fonts/Manrope-VariableFont_wght.ttf'),
   });
 
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.loading}>
-        <GearLogo variant="micro" size="lg" style={styles.loadingLogo} />
-        <ActivityIndicator size="large" color={colors.brandAccent} />
-      </View>
-    );
-  }
-
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <AppShellProvider>
-          <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false }} />
-        </AppShellProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        {!fontsLoaded ? (
+          <View style={styles.loading}>
+            <GearLogo variant="micro" size="lg" style={styles.loadingLogo} />
+            <ActivityIndicator size="large" color={colors.brandAccent} />
+          </View>
+        ) : (
+          <AuthProvider>
+            <AppShellProvider>
+              <StatusBar style="light" />
+              <Stack screenOptions={{ headerShown: false }} />
+            </AppShellProvider>
+          </AuthProvider>
+        )}
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

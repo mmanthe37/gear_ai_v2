@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { colors, radii } from '../../theme/tokens';
+import { radii } from '../../theme/tokens';
+import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
 import type { LiveOBDData, OBDSessionState } from '../../types/diagnostic';
 
@@ -33,17 +34,70 @@ const PID_ENTRIES: PIDEntry[] = [
   { key: 'battery_voltage', label: 'Battery', unit: 'V', decimals: 1, warnLow: 12.5 },
 ];
 
-function pidColor(entry: PIDEntry, value: number): string {
-  if (entry.warnHigh !== undefined && value >= entry.warnHigh) return colors.danger;
-  if (entry.warnLow !== undefined && value <= entry.warnLow) return colors.warning;
-  return colors.success;
-}
-
-function formatVal(val: number, decimals = 0): string {
-  return val.toFixed(decimals);
-}
-
 export default function LiveDataGrid({ sessionState, data }: Props) {
+  const { colors } = useTheme();
+
+  function pidColor(entry: PIDEntry, value: number): string {
+    if (entry.warnHigh !== undefined && value >= entry.warnHigh) return colors.danger;
+    if (entry.warnLow !== undefined && value <= entry.warnLow) return colors.warning;
+    return colors.success;
+  }
+
+  function formatVal(val: number, decimals = 0): string {
+    return val.toFixed(decimals);
+  }
+
+  const styles = StyleSheet.create({
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    cell: {
+      width: '47%',
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      gap: 2,
+    },
+    cellLabel: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+    },
+    cellValue: {
+      fontFamily: fontFamilies.heading,
+      fontSize: typeScale.md,
+    },
+    cellUnit: {
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+      color: colors.textSecondary,
+    },
+    centeredState: {
+      minHeight: 120,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 8,
+      padding: 16,
+    },
+    stateText: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+      textAlign: 'center',
+    },
+    errorText: {
+      color: colors.danger,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+      textAlign: 'center',
+    },
+  });
+
   if (sessionState.status === 'scanning' || sessionState.status === 'connecting') {
     return (
       <View style={styles.centeredState}>
@@ -91,53 +145,3 @@ export default function LiveDataGrid({ sessionState, data }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  cell: {
-    width: '47%',
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 2,
-  },
-  cellLabel: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.xs,
-  },
-  cellValue: {
-    fontFamily: fontFamilies.heading,
-    fontSize: typeScale.md,
-  },
-  cellUnit: {
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.xs,
-    color: colors.textSecondary,
-  },
-  centeredState: {
-    minHeight: 120,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    padding: 16,
-  },
-  stateText: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-    textAlign: 'center',
-  },
-  errorText: {
-    color: colors.danger,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-    textAlign: 'center',
-  },
-});

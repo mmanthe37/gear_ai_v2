@@ -45,8 +45,9 @@ import LiveDataGrid from '../../components/diagnostics/LiveDataGrid';
 import SymptomCheckerPanel from '../../components/diagnostics/SymptomCheckerPanel';
 import RecallAlertsPanel from '../../components/diagnostics/RecallAlertsPanel';
 import DTCCodeCard from '../../components/diagnostics/DTCCodeCard';
-import { colors, radii } from '../../theme/tokens';
+import { radii } from '../../theme/tokens';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import { useTheme } from '../../contexts/ThemeContext';
 
 type Tab = 'overview' | 'codes' | 'live' | 'symptoms' | 'recalls';
 
@@ -63,6 +64,7 @@ const TABS: { key: Tab; label: string }[] = [
 // ============================================================================
 
 export default function DiagnosticsScreen() {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>('overview');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -350,6 +352,7 @@ export default function DiagnosticsScreen() {
   // Render
   // -------------------------------------------------------------------------
 
+  const styles = makeStyles(colors);
   return (
     <AppShell routeKey="diagnostics" title="Diagnostics" subtitle="OBD-II, health score, and vehicle intelligence">
       {/* Vehicle Picker */}
@@ -480,6 +483,8 @@ export default function DiagnosticsScreen() {
 // ============================================================================
 
 function EmptyVehicleState() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.emptyState}>
       <GearLogo variant="micro" size="lg" />
@@ -501,14 +506,15 @@ interface OverviewTabProps {
   onGoToTab: (tab: Tab) => void;
 }
 
-const severityColor: Record<string, string> = {
-  critical: '#DC2626',
-  high: colors.danger,
-  medium: colors.warning,
-  low: colors.success,
-};
-
 function OverviewTab({ vehicle, healthScore, healthLoading, activeCodes, unacknowledgedRecalls, onRecalcHealth, onGoToTab }: OverviewTabProps) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
+  const severityColor: Record<string, string> = {
+    critical: '#DC2626',
+    high: colors.danger,
+    medium: colors.warning,
+    low: colors.success,
+  };
   return (
     <View style={styles.sectionGap}>
       {/* Health Score card */}
@@ -600,6 +606,8 @@ function OverviewTab({ vehicle, healthScore, healthLoading, activeCodes, unackno
 }
 
 function QuickActionBtn({ label, icon, onPress }: { label: string; icon: string; onPress: () => void }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <Pressable style={({ pressed }) => [styles.quickBtn, pressed && { opacity: 0.8 }]} onPress={onPress}>
       <Text style={styles.quickIcon}>{icon}</Text>
@@ -623,6 +631,8 @@ interface CodesTabProps {
 }
 
 function CodesTab({ codes, filter, loading, obdConnected, onFilterChange, onAnalyze, onResolve, onReadCodes, onClearCodes }: CodesTabProps) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const [reading, setReading] = useState(false);
   const [clearing, setClearing] = useState(false);
 
@@ -695,6 +705,8 @@ interface LiveDataTabProps {
 }
 
 function LiveDataTab({ obdState, liveData, scanning, onConnect }: LiveDataTabProps) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.sectionGap}>
       {/* Connection card */}
@@ -757,6 +769,8 @@ function LiveDataTab({ obdState, liveData, scanning, onConnect }: LiveDataTabPro
 // ---------- Helper card component ----------
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{title}</Text>
@@ -769,7 +783,8 @@ function SectionCard({ title, children }: { title: string; children: React.React
 // Styles
 // ============================================================================
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 16, gap: 12 },
   sectionGap: { gap: 12 },
@@ -913,3 +928,4 @@ const styles = StyleSheet.create({
   connectBtnText: { color: '#000', fontFamily: fontFamilies.heading, fontSize: typeScale.xs },
   obdHint: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, lineHeight: 18 },
 });
+}

@@ -28,8 +28,9 @@ import {
 import { uploadFile, STORAGE_BUCKETS } from '../../services/storage-service';
 import type { MaintenanceRecord } from '../../types/maintenance';
 import type { MileageLogEntry, Vehicle, VehicleStatus } from '../../types/vehicle';
-import { colors, radii } from '../../theme/tokens';
+import { radii } from '../../theme/tokens';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -69,6 +70,8 @@ function calcAnnualMileage(logs: MileageLogEntry[]): string {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status?: VehicleStatus }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const cfg = STATUS_CONFIG[status || 'active'];
   return (
     <View style={[styles.badge, { borderColor: cfg.color, backgroundColor: cfg.bg }]}>
@@ -78,6 +81,8 @@ function StatusBadge({ status }: { status?: VehicleStatus }) {
 }
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -87,6 +92,8 @@ function SectionCard({ title, children }: { title: string; children: React.React
 }
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
@@ -108,6 +115,8 @@ function FormField({
   placeholder?: string;
   keyboardType?: 'default' | 'numeric' | 'decimal-pad';
 }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -126,6 +135,7 @@ function FormField({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function VehicleDetailScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
 
@@ -303,6 +313,7 @@ export default function VehicleDetailScreen() {
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
+  const styles = makeStyles(colors);
   return (
     <AppShell routeKey="vehicle-detail" title={vehicleTitle} subtitle="Vehicle profile">
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -640,7 +651,8 @@ export default function VehicleDetailScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 16, gap: 14 },
 
@@ -795,3 +807,4 @@ const styles = StyleSheet.create({
   statusOptionText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
 });
 
+}

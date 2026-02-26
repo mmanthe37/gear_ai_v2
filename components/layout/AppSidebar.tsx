@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import type { ShellRouteKey, SidebarChatItem, SidebarVehicleItem } from '../../types/shell';
-import { colors, radii } from '../../theme/tokens';
+import { radii } from '../../theme/tokens';
+import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
 import GearLogo from '../branding/GearLogo';
 import { PRIMARY_NAV_ITEMS, getTopNavActiveKey } from './nav-config';
@@ -30,6 +31,7 @@ export default function AppSidebar({
   onToggleCollapse,
   onCloseMobile,
 }: AppSidebarProps) {
+  const { colors } = useTheme();
   const activeKey = getTopNavActiveKey(routeKey);
   const isMobileDrawer = Boolean(onCloseMobile && !onToggleCollapse);
 
@@ -37,6 +39,136 @@ export default function AppSidebar({
     router.push(href as never);
     onCloseMobile?.();
   };
+
+  const styles = StyleSheet.create({
+    sidebar: {
+      flex: 1,
+      backgroundColor: 'rgba(18, 26, 35, 0.94)',
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    brandBlock: {
+      minHeight: 172,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 10,
+    },
+    brandSubtext: {
+      color: colors.textSecondary,
+      fontSize: typeScale.xs,
+      fontFamily: fontFamilies.body,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingVertical: 14,
+      gap: 18,
+    },
+    section: {
+      gap: 8,
+      paddingHorizontal: 10,
+    },
+    sectionTitle: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.heading,
+      fontSize: typeScale.xs,
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      marginBottom: 4,
+    },
+    navItem: {
+      minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      borderRadius: radii.md,
+      paddingHorizontal: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    navItemCollapsed: {
+      justifyContent: 'center',
+      paddingHorizontal: 8,
+    },
+    navItemActive: {
+      borderColor: colors.brandAccent,
+      backgroundColor: 'rgba(51, 214, 210, 0.14)',
+    },
+    navItemInteraction: {
+      opacity: 0.92,
+    },
+    navLabel: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
+    navLabelActive: {
+      color: colors.textPrimary,
+    },
+    listItem: {
+      minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    listItemCollapsed: {
+      justifyContent: 'center',
+      paddingVertical: 12,
+    },
+    listCopy: {
+      flex: 1,
+      gap: 2,
+    },
+    listTitle: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
+    listMeta: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+    },
+    emptyText: {
+      color: colors.textSecondary,
+      fontSize: typeScale.xs,
+      fontFamily: fontFamilies.body,
+      lineHeight: 16,
+    },
+    footer: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      padding: 10,
+    },
+    collapseButton: {
+      minHeight: 44,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    collapseLabel: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
+  });
 
   return (
     <View style={styles.sidebar}>
@@ -186,132 +318,3 @@ export default function AppSidebar({
   );
 }
 
-const styles = StyleSheet.create({
-  sidebar: {
-    flex: 1,
-    backgroundColor: 'rgba(18, 26, 35, 0.94)',
-    borderRightWidth: 1,
-    borderRightColor: colors.border,
-  },
-  brandBlock: {
-    minHeight: 172,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-  },
-  brandSubtext: {
-    color: colors.textSecondary,
-    fontSize: typeScale.xs,
-    fontFamily: fontFamilies.body,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingVertical: 14,
-    gap: 18,
-  },
-  section: {
-    gap: 8,
-    paddingHorizontal: 10,
-  },
-  sectionTitle: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.heading,
-    fontSize: typeScale.xs,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  navItem: {
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderRadius: radii.md,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  navItemCollapsed: {
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  navItemActive: {
-    borderColor: colors.brandAccent,
-    backgroundColor: 'rgba(51, 214, 210, 0.14)',
-  },
-  navItemInteraction: {
-    opacity: 0.92,
-  },
-  navLabel: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-  },
-  navLabelActive: {
-    color: colors.textPrimary,
-  },
-  listItem: {
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  listItemCollapsed: {
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  listCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  listTitle: {
-    color: colors.textPrimary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-  },
-  listMeta: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.xs,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: typeScale.xs,
-    fontFamily: fontFamilies.body,
-    lineHeight: 16,
-  },
-  footer: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    padding: 10,
-  },
-  collapseButton: {
-    minHeight: 44,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  collapseLabel: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-  },
-});

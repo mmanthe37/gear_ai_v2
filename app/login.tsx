@@ -14,10 +14,12 @@ import {
 import { router } from 'expo-router';
 import GearLogo from '../components/branding/GearLogo';
 import { useAuth } from '../contexts/AuthContext';
-import { colors, radii } from '../theme/tokens';
+import { radii } from '../theme/tokens';
+import { useTheme } from '../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../theme/typography';
 
 export default function LoginScreen() {
+  const { colors } = useTheme();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -62,6 +64,113 @@ export default function LoginScreen() {
       setIsLoading(false);
     }
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    scrollContent: {
+      minHeight: '100%',
+      justifyContent: 'center',
+      paddingHorizontal: 18,
+      paddingVertical: 30,
+      gap: 22,
+    },
+    hero: {
+      alignItems: 'center',
+      gap: 8,
+    },
+    heroTitle: {
+      color: colors.textPrimary,
+      fontSize: typeScale.lg,
+      fontFamily: fontFamilies.heading,
+      textAlign: 'center',
+    },
+    heroSubtitle: {
+      color: colors.textSecondary,
+      fontSize: typeScale.sm,
+      fontFamily: fontFamilies.body,
+      textAlign: 'center',
+      maxWidth: 420,
+    },
+    card: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      backgroundColor: colors.surface,
+      padding: 18,
+      gap: 14,
+      maxWidth: 520,
+      alignSelf: 'center',
+      width: '100%',
+    },
+    cardTitle: {
+      color: colors.textPrimary,
+      fontSize: typeScale.xl,
+      fontFamily: fontFamilies.heading,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    inputGroup: {
+      gap: 6,
+    },
+    label: {
+      color: colors.textSecondary,
+      fontSize: typeScale.sm,
+      fontFamily: fontFamilies.body,
+    },
+    input: {
+      minHeight: 44,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      backgroundColor: colors.surfaceAlt,
+      color: colors.textPrimary,
+      paddingHorizontal: 12,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.md,
+    },
+    submitButton: {
+      minHeight: 44,
+      borderRadius: radii.md,
+      backgroundColor: colors.brandAccent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 6,
+    },
+    submitButtonText: {
+      color: colors.background,
+      fontFamily: fontFamilies.heading,
+      fontSize: typeScale.sm,
+    },
+    toggle: {
+      minHeight: 44,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceAlt,
+    },
+    toggleText: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonInteraction: {
+      opacity: 0.92,
+    },
+  });
 
   return (
     <View style={styles.container}>
@@ -169,109 +278,3 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    minHeight: '100%',
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 30,
-    gap: 22,
-  },
-  hero: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  heroTitle: {
-    color: colors.textPrimary,
-    fontSize: typeScale.lg,
-    fontFamily: fontFamilies.heading,
-    textAlign: 'center',
-  },
-  heroSubtitle: {
-    color: colors.textSecondary,
-    fontSize: typeScale.sm,
-    fontFamily: fontFamilies.body,
-    textAlign: 'center',
-    maxWidth: 420,
-  },
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    padding: 18,
-    gap: 14,
-    maxWidth: 520,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  cardTitle: {
-    color: colors.textPrimary,
-    fontSize: typeScale.xl,
-    fontFamily: fontFamilies.heading,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  label: {
-    color: colors.textSecondary,
-    fontSize: typeScale.sm,
-    fontFamily: fontFamilies.body,
-  },
-  input: {
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    backgroundColor: colors.surfaceAlt,
-    color: colors.textPrimary,
-    paddingHorizontal: 12,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.md,
-  },
-  submitButton: {
-    minHeight: 44,
-    borderRadius: radii.md,
-    backgroundColor: colors.brandAccent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  submitButtonText: {
-    color: colors.background,
-    fontFamily: fontFamilies.heading,
-    fontSize: typeScale.sm,
-  },
-  toggle: {
-    minHeight: 44,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceAlt,
-  },
-  toggleText: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonInteraction: {
-    opacity: 0.92,
-  },
-});

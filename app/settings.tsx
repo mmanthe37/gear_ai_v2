@@ -25,8 +25,10 @@ import { uploadFile, STORAGE_BUCKETS } from '../services/storage-service';
 import { SubscriptionTiers } from '../types/user';
 import type { UserPreferences } from '../types/user';
 import type { Vehicle } from '../types/vehicle';
-import { colors, radii } from '../theme/tokens';
+import { radii } from '../theme/tokens';
+import type { ThemeMode } from '../theme/tokens';
 import { fontFamilies, typeScale } from '../theme/typography';
+import { useTheme } from '../contexts/ThemeContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,16 +78,12 @@ const LANGUAGES = [
 ];
 
 const TIER_ORDER = ['free', 'pro', 'mechanic', 'dealer'] as const;
-const TIER_COLORS: Record<string, string> = {
-  free: colors.textSecondary,
-  pro: colors.brandAccent,
-  mechanic: '#8B5CF6',
-  dealer: '#F59E0B',
-};
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SectionCard({ title, children }: { title?: string; children: React.ReactNode }) {
+  const { colors } = useTheme();
+  const s = makeStyles(colors);
   return (
     <View style={s.card}>
       {title && <Text style={s.cardTitle}>{title}</Text>}
@@ -99,6 +97,8 @@ function SettingRow({
 }: {
   label: string; sublabel?: string; value?: string; rightSlot?: React.ReactNode; onPress?: () => void;
 }) {
+  const { colors } = useTheme();
+  const s = makeStyles(colors);
   const inner = (
     <View style={s.settingRow}>
       <View style={{ flex: 1 }}>
@@ -121,6 +121,7 @@ function SettingRow({
 function ToggleRow({ label, sublabel, value, onValueChange }: {
   label: string; sublabel?: string; value: boolean; onValueChange: (v: boolean) => void;
 }) {
+  const { colors } = useTheme();
   return (
     <SettingRow
       label={label}
@@ -144,6 +145,8 @@ function SegmentControl<T extends string>({
   options: { label: string; value: T }[];
   onChange: (v: T) => void;
 }) {
+  const { colors } = useTheme();
+  const s = makeStyles(colors);
   return (
     <View style={s.segment}>
       {options.map((opt) => (
@@ -167,6 +170,8 @@ function SegmentControl<T extends string>({
 }
 
 function ComingSoonBadge() {
+  const { colors } = useTheme();
+  const s = makeStyles(colors);
   return (
     <View style={s.comingSoon}>
       <Text style={s.comingSoonText}>Coming Soon</Text>
@@ -177,6 +182,13 @@ function ComingSoonBadge() {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
+  const { colors, setTheme } = useTheme();
+  const TIER_COLORS: Record<string, string> = {
+    free: colors.textSecondary,
+    pro: colors.brandAccent,
+    mechanic: '#8B5CF6',
+    dealer: '#F59E0B',
+  };
   const { user, signOut } = useAuth();
 
   const [activeTab, setActiveTab] = useState<Tab>('account');
@@ -491,7 +503,7 @@ export default function SettingsScreen() {
         </SectionCard>
 
         <SectionCard title="Appearance">
-          <SettingRow label="Theme Mode" sublabel="Applied on next launch" />
+          <SettingRow label="Theme Mode" />
           <View style={s.themeRow}>
             {([
               { key: 'dark',   label: 'Dark',   icon: 'moon-outline' },
@@ -501,7 +513,7 @@ export default function SettingsScreen() {
               <Pressable
                 key={t.key}
                 accessibilityRole="button"
-                onPress={() => setPref('theme_mode', t.key)}
+                onPress={() => { setPref('theme_mode', t.key); setTheme(t.key as ThemeMode); }}
                 style={({ pressed }) => [
                   s.themeOption,
                   (prefs.theme_mode || 'dark') === t.key && s.themeOptionActive,
@@ -835,6 +847,7 @@ export default function SettingsScreen() {
     );
   }
 
+  const s = makeStyles(colors);
   return (
     <AppShell routeKey="settings" title="Settings" subtitle="Account and platform preferences">
       {/* Tab Bar */}
@@ -878,7 +891,8 @@ export default function SettingsScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const s = StyleSheet.create({
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 16, gap: 14, paddingBottom: 40 },
 
@@ -1101,3 +1115,4 @@ const s = StyleSheet.create({
   integrationTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
   integrationDesc: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 3 },
 });
+}

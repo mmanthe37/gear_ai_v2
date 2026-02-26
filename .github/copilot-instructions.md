@@ -1,349 +1,107 @@
 # GitHub Copilot Instructions for Gear AI CoPilot
 
-## Project Overview
+## Project snapshot
+- Gear AI CoPilot is a mobile-first automotive "digital twin" app (Expo/React Native + Supabase + OpenAI).
+- The repository also contains a separate MCP workspace server under `mcp-server/`.
 
-**Gear AI CoPilot** is a comprehensive mobile application that consolidates fragmented automotive tools into a single, intelligent "Digital Twin" for vehicles. The app combines VIN decoding, owner's manual RAG chat, OBD-II diagnostics, and real-time market valuation using AI, telematics, and real-time market data.
+## Build, lint, type-check, and test commands
 
-**Development Status**: Phase 1 MVP (65% Complete)
-- Infrastructure: 95% complete (deployment-ready)
-- Frontend UI: 95% complete (all screens designed)
-- Backend: 35% complete (schema ready, services partial)
+### Root app (`/`)
+- Install deps: `npm install`
+- Validate local env: `npm run setup`
+- Start dev server: `npm start`
+- Platform run targets: `npm run ios`, `npm run android`, `npm run web`
+- Lint: `npm run lint`
+- Type-check: `npx tsc --noEmit`
+- Web production build: `npm run build`
+- CI formatting check: `npx prettier --check .`
 
-## Technology Stack
+### MCP server (`/mcp-server`)
+- Install deps: `cd mcp-server && npm install`
+- Dev server: `cd mcp-server && npm run dev`
+- Build: `cd mcp-server && npm run build`
+- Start built server: `cd mcp-server && npm run start`
 
-### Frontend
-- **Framework**: React Native 0.79 with Expo SDK 53
-- **Language**: TypeScript 5.8 with strict mode enabled
-- **Navigation**: Expo Router (file-based routing)
-- **UI Design**: Custom "Liquid Glass" glassmorphism design system
-- **Styling**: Expo Linear Gradient, Expo Blur
+### Test status and single-test command
+- There is currently no test script in root `package.json` or `mcp-server/package.json`.
+- There are currently no `*.test.*` / `*.spec.*` files in this repo.
+- A single-test command does not exist yet in the current codebase state.
 
-### Backend
-- **BaaS**: Supabase (PostgreSQL 15 + pgvector extension)
-- **Auth**: Firebase Auth (synced with Supabase)
-- **Serverless**: Supabase Edge Functions (Deno runtime)
-- **Storage**: Supabase Storage (for photos, manuals)
+## High-level architecture
 
-### AI/ML
-- **LLM**: OpenAI GPT-4 for conversational AI
-- **Embeddings**: intfloat/e5-base-v2 (768 dimensions)
-- **Vector Search**: pgvector with ivfflat indexing
+### 1) Runtime composition and routing
+- `app/_layout.tsx` is the app root and wraps everything in:
+  - `ErrorBoundary`
+  - `ThemeProvider`
+  - `AuthProvider`
+  - `AppShellProvider`
+- File-based routes are grouped by feature folders (`app/garage`, `app/maintenance`, `app/diagnostics`, `app/manuals`, `app/chat`, `app/settings.tsx`).
+- Authenticated feature screens render inside `components/layout/AppShell.tsx`; this shell handles top nav, sidebar, responsive behavior, and shared vehicle/chat sidebar data.
 
-### Third-Party APIs
-- **VIN Decoding**: NHTSA vPIC API
-- **Diagnostics**: CarMD API
-- **Valuation**: MarketCheck, Black Book
-- **Payments**: Stripe Connect
+### 2) Data access layer
+- `services/*.ts` is the functional service layer; screens call services directly.
+- `services/index.ts` is the canonical barrel for service exports.
+- `lib/supabase.ts` is the single Supabase client used across services and auth flows.
+- Current auth flow is Supabase Auth + `public.users` profile sync (`contexts/AuthContext.tsx`, `services/auth-service.ts`).
 
-## Coding Conventions
+### 3) AI + chat pipeline
+- Chat UI (`app/chat/[id].tsx`) persists conversations via `chat-service`.
+- Message generation is handled by `services/ai-service.ts`.
+- RAG retrieval path:
+  - `ai-service` -> `manual-search` (BM25 + semantic + RRF)
+  - `manual-search` -> `rag-pipeline` embeddings + Supabase vector search/RPC
+  - Sources are returned and attached to chat messages.
 
-### TypeScript Standards
-- **Always use TypeScript strict mode** - no implicit any
-- Define explicit types for all function parameters and return values
-- Avoid using `any` type - use `unknown` or proper types instead
-- Use interfaces for object shapes, type aliases for unions/primitives
-- Prefer named exports over default exports for better refactoring
+### 4) Database and migrations
+- Schema and policies live in `supabase/migrations/`.
+- Important baseline migrations:
+  - initial schema (`20250101000000_initial_schema.sql`)
+  - RLS policies (`20250101000001_rls_policies.sql`)
+  - search RPC (`20250201000000_search_manual_chunks_rpc.sql`)
+  - helper RPCs (`20250301000000_helper_functions.sql`)
+  - auth transition to Supabase Auth (`20250401000000_supabase_auth_migration.sql`)
+  - auto profile trigger (`20250501000000_auto_create_user_profile.sql`)
 
-### File Naming Conventions
-- **Components**: PascalCase.tsx (e.g., `VehicleCard.tsx`, `GlassCard.tsx`)
-- **Services/Utilities**: kebab-case.ts (e.g., `vin-decoder.ts`, `auth-service.ts`)
-- **Type Definitions**: PascalCase.ts, matching the main type name (e.g., `Vehicle.ts`, `User.ts`)
-- **Expo Router Pages**: lowercase.tsx or [dynamic].tsx (e.g., `index.tsx`, `[id].tsx`)
+### 5) Secondary MCP workspace server
+- `mcp-server/index.ts` defines a standalone `mcp-use` server with tool domains:
+  - Vehicle data CRUD
+  - Codebase search/read/list
+  - File edit/create
+  - Build/lint/type-check helpers
+- Treat `/mcp-server` as a separate Node project with its own dependency graph and scripts.
 
-### React/React Native Patterns
-- Use functional components with React hooks exclusively
-- Keep components small, focused, and single-purpose
-- Extract reusable logic into custom hooks
-- Use meaningful prop names with TypeScript interfaces
-- Destructure props in function parameters
-- Use React.memo() for components that render frequently with same props
+## Key repository conventions
 
-### Code Style
-- Follow ESLint configuration (extends expo/tsconfig.base)
-- Use Prettier for consistent formatting
-- Write JSDoc comments for public functions and components
-- Explain "why" not "what" in inline comments
-- Maximum line length: 100 characters
+### App and UI conventions
+- Feature screens should use `AppShell` and provide a stable `routeKey` (`components/layout/nav-config.ts` maps route state to top-nav state).
+- Theme is centralized in `ThemeContext` + `theme/tokens.ts`; prefer token-based colors/radii over ad-hoc constants.
+- Branding uses reusable logo/action-icon components (`components/branding/*`) across auth and shell screens.
 
-### Import Organization
-Order imports as follows:
-1. React and React Native imports
-2. Third-party library imports (alphabetical)
-3. Local imports: types, contexts, components, services, utilities
-4. Relative imports (../.. imports)
+### Service and data conventions
+- Service functions are named exports, usually async, and generally follow: query Supabase -> log context on failure -> throw typed `Error` (or return explicit fallback in a few user-facing helpers).
+- Vehicle and chat records are often soft-deleted / filtered with `is_active = true`.
+- Tier gating is enforced via service logic (e.g., `canAddVehicle` in `services/vehicle-service.ts`) and shared limits in `services/constants.ts` + `services/subscription-service.ts`.
 
-Example:
-```typescript
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+### Auth and identity conventions
+- Database ownership checks and RLS are based on `auth.uid()` (Supabase Auth UUID), not Firebase UID.
+- `public.users.user_id` is the identity anchor used by service methods and policies.
 
-import { Vehicle } from '@/types/vehicle';
-import { useAuth } from '@/contexts/AuthContext';
-import { GlassCard } from '@/components/GlassCard';
-import { getVehicles } from '@/services/vehicle-service';
-```
+### Environment conventions
+- Supabase config supports both Metro-safe `EXPO_PUBLIC_*` vars and `app.config.js` `extra` fallback.
+- `npm run setup` validates `.env.local` with required Firebase/Supabase keys before local runs.
 
-## Project Structure
+### Typing/import/file conventions actually used in code
+- TypeScript strict mode is enabled (`tsconfig.json`).
+- Type barrel is `types/index.ts`; type files are lowercase (`types/vehicle.ts`, `types/user.ts`, etc.).
+- Relative imports are the dominant pattern in app/services (`../` / `../../`), even though `@/*` path alias is configured.
 
-```
-gear_ai_v2/
-├── app/                    # Expo Router screens (file-based routing)
-│   ├── (tabs)/            # Bottom tab navigation screens
-│   ├── chat/              # Chat conversation screens
-│   ├── _layout.tsx        # Root layout with providers
-│   ├── index.tsx          # Landing/home screen
-│   └── login.tsx          # Authentication screen
-├── components/            # Reusable UI components
-├── contexts/              # React Context providers (Auth, etc.)
-├── lib/                   # Third-party integrations (Firebase, Supabase clients)
-├── services/              # Business logic and API integrations
-├── types/                 # TypeScript type definitions
-├── docs/                  # Comprehensive documentation
-├── supabase/              # Database migrations and functions
-│   └── migrations/        # SQL migration files
-└── assets/                # Images, fonts, icons
-```
+### Commit and contribution conventions
+- Conventional Commits are expected (documented in `CONTRIBUTING.md`).
 
-## Database Conventions
-
-### Schema Naming
-- **Tables**: Plural, snake_case (e.g., `users`, `vehicles`, `maintenance_records`)
-- **Columns**: snake_case (e.g., `user_id`, `created_at`, `firebase_uid`)
-- **Primary Keys**: `{table_name}_id` UUID (e.g., `vehicle_id`, `user_id`)
-- **Foreign Keys**: Match the referenced table's primary key name
-- **Timestamps**: Always include `created_at` and `updated_at` columns
-
-### Row Level Security (RLS)
-- All user-facing tables MUST have RLS enabled
-- Always use `auth.uid()` to match Firebase UID with `firebase_uid` column
-- Create separate policies for SELECT, INSERT, UPDATE, DELETE
-- Users should only access their own data (via user_id reference)
-
-### Migrations
-- **Naming**: `YYYYMMDDHHMMSS_description.sql` (e.g., `20250101000000_initial_schema.sql`)
-- **Order**: Run migrations in chronological order:
-  1. `20250101000000_initial_schema.sql` (base tables)
-  2. `20250101000001_rls_policies.sql` (security policies)
-  3. `20250201000000_search_manual_chunks_rpc.sql` (RPC functions)
-  4. `20250301000000_helper_functions.sql` (utility functions)
-
-## Service Layer Patterns
-
-### Service Organization
-- One service file per domain (e.g., `vehicle-service.ts`, `maintenance-service.ts`)
-- Export named functions, not classes
-- Each function should be async and return Promise<T>
-- Handle errors gracefully with try-catch blocks
-- Log errors with descriptive context
-
-### Supabase Client Usage
-- Import from `@/lib/supabase`
-- Always use `.select()` with specific columns or `*`
-- Use `.single()` for queries expecting one row
-- Handle both `data` and `error` from responses
-- Use `.order()`, `.limit()`, and `.range()` for pagination
-
-### Example Service Function
-```typescript
-/**
- * Get all vehicles for the authenticated user
- * @param userId - The user's UUID from Supabase
- * @returns Array of vehicles or empty array on error
- */
-export async function getVehicles(userId: string): Promise<Vehicle[]> {
-  try {
-    const { data, error } = await supabase
-      .from('vehicles')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching vehicles:', error);
-      return [];
-    }
-
-    return data || [];
-  } catch (error) {
-    console.error('Unexpected error fetching vehicles:', error);
-    return [];
-  }
-}
-```
-
-## Subscription Tiers
-
-The app enforces subscription tier limits. **Always check tier limits before operations**:
-
-### Vehicle Limits
-- **Free**: 1 vehicle
-- **Pro**: 3 vehicles
-- **Mechanic**: Unlimited
-- **Dealer**: Unlimited
-
-### Key Functions
-- Use `canAddVehicle()` from `vehicle-service.ts` before allowing users to add vehicles
-- Use constants from `services/constants.ts` (e.g., `UNLIMITED_VEHICLES`, `MAX_FILE_SIZE_BYTES`)
-- Check subscription status before enabling premium features (RAG chat, OBD-II, etc.)
-
-## UI/UX Patterns - Liquid Glass Design System
-
-### Glass Card Components
-- Use `GlassCard` component for all card-based UI elements
-- Glass cards use semi-transparent backgrounds with blur effects
-- Standard elevation: `backgroundColor: 'rgba(255, 255, 255, 0.1)'`
-- Apply `BlurView` with intensity 20-40 for glassmorphism effect
-
-### Color Palette
-- **Primary**: `#00D4FF` (cyan blue)
-- **Secondary**: `#8B5CF6` (purple)
-- **Success**: `#10B981` (green)
-- **Warning**: `#F59E0B` (orange)
-- **Error**: `#EF4444` (red)
-- **Text on Glass**: `#FFFFFF` (white) with varying opacity
-- **Dark Background**: `#0F172A` (slate-900)
-
-### Gradients
-- Use `LinearGradient` from expo-linear-gradient
-- Common gradient: `['#1E293B', '#0F172A']` (slate-800 to slate-900)
-- Accent gradients: `['#00D4FF', '#8B5CF6']` (cyan to purple)
-
-### Typography
-- Use system fonts: 'System' or 'SF Pro' on iOS, 'Roboto' on Android
-- Font weights: 400 (regular), 500 (medium), 600 (semibold), 700 (bold)
-- Heading hierarchy: 28px (h1), 24px (h2), 20px (h3), 16px (h4)
-- Body text: 14-16px
-
-## AI & RAG Pipeline
-
-### Vector Search
-- Embeddings are stored in `vector_embeddings` table with pgvector
-- Use `search_manual_chunks_rpc()` function for similarity search
-- Embedding model: intfloat/e5-base-v2 (768 dimensions)
-- Search with cosine similarity, threshold 0.7 for relevance
-
-### OpenAI Integration
-- Import from `@/services/ai-service.ts`
-- Use GPT-4 for conversational AI (not GPT-3.5)
-- Set temperature: 0.7 for balanced creativity/consistency
-- Include system prompts with automotive context
-- Stream responses for better UX on long outputs
-
-### RAG Pipeline Flow
-1. User asks a question about their vehicle
-2. Generate embedding for the question
-3. Search `vector_embeddings` for similar manual chunks
-4. Pass top 5 chunks as context to GPT-4
-5. Generate answer grounded in manual content
-6. Return answer with chunk citations
-
-## Testing & Build
-
-### Environment Setup
-- Copy `.env.example` to `.env.local` for local development
-- Never commit `.env.local` or any files with API keys
-- Run `npm run setup` to validate environment configuration (if available)
-
-### Development Commands
-- `npm start` - Start Expo development server
-- `npm run android` - Run on Android emulator/device
-- `npm run ios` - Run on iOS simulator/device
-- `npm run web` - Run in web browser
-- `npm run lint` - Run ESLint
-- `npm run build` - Build for production (web export)
-
-### Pre-commit Checklist
-- Run `npm run lint` and fix all errors
-- Ensure no console.log statements in production code (use proper logging)
-- Test on both iOS and Android (or web for web-specific changes)
-- Verify no TypeScript errors with `tsc --noEmit`
-- Check that no secrets are committed
-
-## Security Best Practices
-
-### Authentication
-- Never store Firebase credentials in code
-- Use Firebase Auth for user authentication
-- Sync Firebase UID to Supabase `users.firebase_uid` column
-- Always verify auth state before API calls
-
-### API Keys
-- Store all API keys in environment variables (`.env.local`)
-- Use different keys for development and production
-- Never log API keys or tokens
-- Rotate keys if accidentally exposed
-
-### Data Privacy
-- Implement RLS policies for all user data tables
-- Sanitize user inputs before database operations
-- Don't log sensitive user information (emails, VINs, etc.)
-- Follow GDPR and CCPA compliance guidelines
-
-### Supabase Security
-- Use service role key only for admin operations (never in client code)
-- Use anon key for client-side Supabase operations
-- RLS policies provide security - don't bypass them
-- Validate all user inputs before database writes
-
-## Common Patterns & Examples
-
-### Adding a New Feature Screen
-1. Create screen file in `app/` directory (e.g., `app/new-feature.tsx`)
-2. Define TypeScript types in `types/` if needed
-3. Create service functions in `services/` for data operations
-4. Build UI components using Liquid Glass design system
-5. Update navigation in `app/_layout.tsx` if adding to tabs
-
-### Creating a New Service
-1. Create `new-service.ts` in `services/` directory
-2. Import Supabase client: `import { supabase } from '@/lib/supabase'`
-3. Define TypeScript interfaces for parameters and return types
-4. Export async functions with JSDoc comments
-5. Handle errors with try-catch and descriptive logging
-6. Export from `services/index.ts` for easier imports
-
-### Adding Database Migrations
-1. Create new file: `supabase/migrations/YYYYMMDDHHMMSS_description.sql`
-2. Write SQL for schema changes (CREATE, ALTER, etc.)
-3. Add RLS policies if creating new user-facing tables
-4. Update `docs/DATABASE_SCHEMA.md` with schema changes
-5. Test migration on local Supabase instance before deploying
-
-## Documentation References
-
-- **[ARCHITECTURE.md](../docs/ARCHITECTURE.md)** - System architecture and design
-- **[DATABASE_SCHEMA.md](../docs/DATABASE_SCHEMA.md)** - Complete database schema
-- **[DESIGN_SYSTEM.md](../docs/DESIGN_SYSTEM.md)** - UI/UX guidelines and components
-- **[API_INTEGRATION.md](../docs/API_INTEGRATION.md)** - Third-party API specifications
-- **[QUICK_START.md](../docs/QUICK_START.md)** - Setup and getting started guide
-- **[DEVELOPMENT_STATUS.md](../docs/DEVELOPMENT_STATUS.md)** - Current feature completion
-- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Contribution guidelines
-
-## Known Limitations & Todos
-
-- Backend services are partially implemented (~35% complete)
-- Some UI screens need backend integration
-- OBD-II Bluetooth integration not yet implemented
-- RAG pipeline needs manual content ingestion
-- Stripe payment integration in progress
-- No automated tests yet (test infrastructure needed)
-
-## Best Practices Summary
-
-1. **Type Safety**: Use TypeScript strict mode, explicit types everywhere
-2. **File Organization**: Follow established naming conventions and structure
-3. **Code Quality**: Run linter, write clean code, add JSDoc comments
-4. **Security First**: RLS policies, environment variables, input validation
-5. **UI Consistency**: Use Liquid Glass components, follow design system
-6. **Error Handling**: Try-catch blocks, descriptive error messages, user-friendly feedback
-7. **Performance**: React.memo for expensive components, lazy loading, optimize images
-8. **Documentation**: Update docs when changing architecture or adding features
-9. **Subscription Tiers**: Always check tier limits before operations
-10. **Conventional Commits**: Use semantic commit messages (feat, fix, docs, etc.)
-
----
-
-**Last Updated**: February 22, 2026
-**Repository**: github.com/mmanthe37/gear_ai_v2
+## Primary reference docs
+- `README.md`
+- `CONTRIBUTING.md`
+- `docs/ARCHITECTURE.md` (conceptual)
+- `docs/DATABASE_SCHEMA.md`
+- `docs/API_INTEGRATION.md`
+- `docs/DEVELOPMENT_STATUS.md`

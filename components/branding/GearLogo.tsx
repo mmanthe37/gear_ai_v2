@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { colors } from '../../theme/tokens';
+import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies } from '../../theme/typography';
 
 type GearLogoVariant = 'icon' | 'full' | 'wordmark' | 'micro';
@@ -68,6 +68,7 @@ export default function GearLogo({
   accessibilityLabel,
   style,
 }: GearLogoProps) {
+  const { colors } = useTheme();
   const fullSize = FULL_SIZE[size];
   const wordmarkSize = WORDMARK_SIZE[size];
   const iconSize = ICON_SIZES[size];
@@ -79,6 +80,22 @@ export default function GearLogo({
     accessibilityLabel: decorative ? undefined : imageLabel,
     importantForAccessibility: decorative ? ('no-hide-descendants' as const) : ('auto' as const),
   };
+
+  const styles = StyleSheet.create({
+    wrapper: {
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    row: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    wordmark: {
+      color: colors.textPrimary,
+      letterSpacing: 0.4,
+      fontFamily: fontFamilies.heading,
+    },
+  });
 
   if (variant === 'full') {
     return (
@@ -140,18 +157,3 @@ export default function GearLogo({
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  wordmark: {
-    color: colors.textPrimary,
-    letterSpacing: 0.4,
-    fontFamily: fontFamilies.heading,
-  },
-});

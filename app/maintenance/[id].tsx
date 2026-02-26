@@ -22,8 +22,9 @@ import {
 import { getUserVehicles } from '../../services/vehicle-service';
 import type { MaintenanceRecord, MaintenanceType } from '../../types/maintenance';
 import type { Vehicle } from '../../types/vehicle';
-import { colors, radii } from '../../theme/tokens';
+import { radii } from '../../theme/tokens';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import { useTheme } from '../../contexts/ThemeContext';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -39,8 +40,8 @@ const SEVERITY_OVERDUE = '#EF4444';
 const SEVERITY_DUE_SOON = '#F59E0B';
 const SEVERITY_UPCOMING = '#10B981';
 
-function getNextServiceColor(nextDate?: string): string {
-  if (!nextDate) return colors.border;
+function getNextServiceColor(nextDate?: string, borderColor: string = '#334155'): string {
+  if (!nextDate) return borderColor;
   const now = new Date();
   const next = new Date(nextDate);
   const daysUntil = (next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
@@ -66,6 +67,7 @@ const TYPES: { value: MaintenanceType; label: string }[] = [
 ];
 
 export default function MaintenanceDetailScreen() {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -174,6 +176,61 @@ export default function MaintenanceDetailScreen() {
     );
   };
 
+  const styles = StyleSheet.create({
+    scroll: { flex: 1 },
+    content: { padding: 16, paddingBottom: 40 },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, gap: 16 },
+    notFoundText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.md, textAlign: 'center' },
+    card: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, backgroundColor: colors.surface, padding: 16, gap: 16, maxWidth: 840, width: '100%', alignSelf: 'center' },
+    recordHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderLeftWidth: 4, paddingLeft: 12 },
+    recordTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.xl },
+    badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+    typeBadge: { borderWidth: 1, borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 3 },
+    typeBadgeText: { fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'capitalize' },
+    headerActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+    editButton: { minHeight: 36, borderWidth: 1, borderColor: colors.brandAccent, borderRadius: radii.md, paddingHorizontal: 14, justifyContent: 'center' },
+    editButtonText: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+    cancelEditButton: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, paddingHorizontal: 14, justifyContent: 'center' },
+    cancelEditText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+    saveEditButton: { minHeight: 36, backgroundColor: colors.brandAccent, borderRadius: radii.md, paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center' },
+    saveEditText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
+    metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    metaItem: { minWidth: 120, flex: 1, gap: 4 },
+    metaLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
+    metaValue: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+    section: { gap: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 14 },
+    sectionTitle: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 1 },
+    costGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+    costItem: { minWidth: 100, flex: 1, gap: 4 },
+    totalValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
+    descText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, lineHeight: 22 },
+    listItem: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+    listItemBullet: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+    listItemText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, flex: 1 },
+    photoGallery: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    galleryPhoto: { width: 100, height: 100, borderRadius: radii.md },
+    warrantyBanner: { backgroundColor: 'rgba(16,185,129,0.15)', borderWidth: 1, borderColor: '#10B981', borderRadius: radii.md, padding: 10, alignItems: 'center' },
+    warrantyText: { color: '#10B981', fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
+    dangerZone: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 16, alignItems: 'flex-start' },
+    deleteButton: { minHeight: 44, backgroundColor: '#EF4444', borderRadius: radii.md, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
+    deleteButtonText: { color: '#fff', fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
+    group: { gap: 6 },
+    row: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    chip: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, backgroundColor: colors.surfaceAlt, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center' },
+    chipActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51, 214, 210, 0.14)' },
+    chipText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+    chipTextActive: { color: colors.textPrimary },
+    input: { minHeight: 44, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, color: colors.textPrimary, paddingHorizontal: 12, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+    notesInput: { minHeight: 80, textAlignVertical: 'top', paddingTop: 10 },
+    dtcBadge: { borderWidth: 1, borderColor: colors.warning, borderRadius: radii.sm, paddingHorizontal: 8, paddingVertical: 3 },
+    dtcBadgeText: { color: colors.warning, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+    primaryButton: { minHeight: 44, borderRadius: radii.md, backgroundColor: colors.brandAccent, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
+    primaryButtonText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
+    buttonContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    buttonInteraction: { opacity: 0.88 },
+  });
+
   if (loading) {
     return (
       <AppShell routeKey="maintenance" title="Record Detail" subtitle="">
@@ -198,7 +255,7 @@ export default function MaintenanceDetailScreen() {
     );
   }
 
-  const severityColor = getNextServiceColor(record.next_service_date);
+  const severityColor = getNextServiceColor(record.next_service_date, colors.border);
   const typeColor = TYPE_COLORS[record.type] || colors.brandAccent;
   const editTotal = (parseFloat(editPartsCost) || 0) + (parseFloat(editLaborCost) || 0);
 
@@ -460,58 +517,3 @@ export default function MaintenanceDetailScreen() {
     </AppShell>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { flex: 1 },
-  content: { padding: 16, paddingBottom: 40 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, gap: 16 },
-  notFoundText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.md, textAlign: 'center' },
-  card: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, backgroundColor: colors.surface, padding: 16, gap: 16, maxWidth: 840, width: '100%', alignSelf: 'center' },
-  recordHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderLeftWidth: 4, paddingLeft: 12 },
-  recordTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.xl },
-  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  typeBadge: { borderWidth: 1, borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 3 },
-  typeBadgeText: { fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'capitalize' },
-  headerActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  editButton: { minHeight: 36, borderWidth: 1, borderColor: colors.brandAccent, borderRadius: radii.md, paddingHorizontal: 14, justifyContent: 'center' },
-  editButtonText: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  cancelEditButton: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, paddingHorizontal: 14, justifyContent: 'center' },
-  cancelEditText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  saveEditButton: { minHeight: 36, backgroundColor: colors.brandAccent, borderRadius: radii.md, paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center' },
-  saveEditText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-  metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  metaItem: { minWidth: 120, flex: 1, gap: 4 },
-  metaLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
-  metaValue: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  section: { gap: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 14 },
-  sectionTitle: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 1 },
-  costGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  costItem: { minWidth: 100, flex: 1, gap: 4 },
-  totalValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
-  descText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, lineHeight: 22 },
-  listItem: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
-  listItemBullet: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  listItemText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, flex: 1 },
-  photoGallery: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  galleryPhoto: { width: 100, height: 100, borderRadius: radii.md },
-  warrantyBanner: { backgroundColor: 'rgba(16,185,129,0.15)', borderWidth: 1, borderColor: '#10B981', borderRadius: radii.md, padding: 10, alignItems: 'center' },
-  warrantyText: { color: '#10B981', fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-  dangerZone: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 16, alignItems: 'flex-start' },
-  deleteButton: { minHeight: 44, backgroundColor: '#EF4444', borderRadius: radii.md, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
-  deleteButtonText: { color: '#fff', fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-  group: { gap: 6 },
-  row: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, backgroundColor: colors.surfaceAlt, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center' },
-  chipActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51, 214, 210, 0.14)' },
-  chipText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-  chipTextActive: { color: colors.textPrimary },
-  input: { minHeight: 44, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, color: colors.textPrimary, paddingHorizontal: 12, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  notesInput: { minHeight: 80, textAlignVertical: 'top', paddingTop: 10 },
-  dtcBadge: { borderWidth: 1, borderColor: colors.warning, borderRadius: radii.sm, paddingHorizontal: 8, paddingVertical: 3 },
-  dtcBadgeText: { color: colors.warning, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-  primaryButton: { minHeight: 44, borderRadius: radii.md, backgroundColor: colors.brandAccent, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
-  primaryButtonText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-  buttonContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  buttonInteraction: { opacity: 0.88 },
-});

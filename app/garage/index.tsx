@@ -15,7 +15,8 @@ import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserVehicles } from '../../services/vehicle-service';
 import type { Vehicle, VehicleStatus } from '../../types/vehicle';
-import { colors, radii } from '../../theme/tokens';
+import { radii } from '../../theme/tokens';
+import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
 
 const STATUS_COLORS: Record<VehicleStatus, string> = {
@@ -30,15 +31,40 @@ const STATUS_LABELS: Record<VehicleStatus, string> = {
 };
 
 function StatTile({ label, value }: { label: string; value: string }) {
+  const { colors } = useTheme();
+  const tileStyles = StyleSheet.create({
+    statTile: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: radii.md,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      minWidth: 150,
+      flex: 1,
+    },
+    statValue: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.heading,
+      fontSize: typeScale.xl,
+    },
+    statLabel: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+      marginTop: 4,
+    },
+  });
   return (
-    <View style={styles.statTile}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+    <View style={tileStyles.statTile}>
+      <Text style={tileStyles.statValue}>{value}</Text>
+      <Text style={tileStyles.statLabel}>{label}</Text>
     </View>
   );
 }
 
 export default function GarageScreen() {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,6 +91,171 @@ export default function GarageScreen() {
     const sum = vehicles.reduce((acc, vehicle) => acc + (vehicle.current_mileage || 0), 0);
     return Math.round(sum / vehicles.length);
   }, [vehicles]);
+
+  const styles = StyleSheet.create({
+    scroll: {
+      flex: 1,
+    },
+    content: {
+      padding: 16,
+      gap: 16,
+    },
+    panel: {
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      padding: 16,
+      gap: 16,
+    },
+    panelHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 14,
+      flexWrap: 'wrap',
+    },
+    panelTitle: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.heading,
+      fontSize: typeScale.lg,
+    },
+    panelSubtitle: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+      marginTop: 4,
+    },
+    primaryButton: {
+      minHeight: 44,
+      borderRadius: radii.md,
+      paddingHorizontal: 14,
+      backgroundColor: colors.brandAccent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 8,
+    },
+    primaryButtonText: {
+      color: colors.background,
+      fontFamily: fontFamilies.heading,
+      fontSize: typeScale.sm,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      gap: 10,
+      flexWrap: 'wrap',
+    },
+    listWrap: {
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      padding: 16,
+      gap: 12,
+    },
+    sectionTitle: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.heading,
+      fontSize: typeScale.md,
+    },
+    emptyState: {
+      minHeight: 180,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.md,
+    },
+    emptySubtitle: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+      textAlign: 'center',
+    },
+    vehicleCard: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      backgroundColor: colors.surfaceAlt,
+      minHeight: 64,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 10,
+    },
+    vehicleInfoWrap: {
+      flex: 1,
+      minWidth: 0,
+    },
+    vehicleName: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.md,
+    },
+    vehicleSubName: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+      marginTop: 1,
+    },
+    vehicleMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 3,
+      flexWrap: 'wrap',
+    },
+    vehicleMeta: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+    },
+    statusPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      borderWidth: 1,
+      borderRadius: radii.full,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+    },
+    statusDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    statusPillText: {
+      fontFamily: fontFamilies.body,
+      fontSize: 11,
+    },
+    secondaryButton: {
+      minHeight: 36,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.full,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 6,
+    },
+    secondaryButtonText: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+    },
+    buttonInteraction: {
+      opacity: 0.92,
+    },
+  });
 
   return (
     <AppShell routeKey="garage" title="Garage" subtitle="Vehicle command center">
@@ -174,188 +365,3 @@ export default function GarageScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    gap: 16,
-  },
-  panel: {
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 16,
-    gap: 16,
-  },
-  panelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 14,
-    flexWrap: 'wrap',
-  },
-  panelTitle: {
-    color: colors.textPrimary,
-    fontFamily: fontFamilies.heading,
-    fontSize: typeScale.lg,
-  },
-  panelSubtitle: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-    marginTop: 4,
-  },
-  primaryButton: {
-    minHeight: 44,
-    borderRadius: radii.md,
-    paddingHorizontal: 14,
-    backgroundColor: colors.brandAccent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  primaryButtonText: {
-    color: colors.background,
-    fontFamily: fontFamilies.heading,
-    fontSize: typeScale.sm,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  statTile: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radii.md,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    minWidth: 150,
-    flex: 1,
-  },
-  statValue: {
-    color: colors.textPrimary,
-    fontFamily: fontFamilies.heading,
-    fontSize: typeScale.xl,
-  },
-  statLabel: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.xs,
-    marginTop: 4,
-  },
-  listWrap: {
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 16,
-    gap: 12,
-  },
-  sectionTitle: {
-    color: colors.textPrimary,
-    fontFamily: fontFamilies.heading,
-    fontSize: typeScale.md,
-  },
-  emptyState: {
-    minHeight: 180,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-  },
-  emptyTitle: {
-    color: colors.textPrimary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.md,
-  },
-  emptySubtitle: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-    textAlign: 'center',
-  },
-  vehicleCard: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    backgroundColor: colors.surfaceAlt,
-    minHeight: 64,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 10,
-  },
-  vehicleInfoWrap: {
-    flex: 1,
-    minWidth: 0,
-  },
-  vehicleName: {
-    color: colors.textPrimary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.md,
-  },
-  vehicleSubName: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.xs,
-    marginTop: 1,
-  },
-  vehicleMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 3,
-    flexWrap: 'wrap',
-  },
-  vehicleMeta: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.xs,
-  },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderRadius: radii.full,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusPillText: {
-    fontFamily: fontFamilies.body,
-    fontSize: 11,
-  },
-  secondaryButton: {
-    minHeight: 36,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.full,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  secondaryButtonText: {
-    color: colors.textPrimary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.xs,
-  },
-  buttonInteraction: {
-    opacity: 0.92,
-  },
-});

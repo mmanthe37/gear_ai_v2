@@ -19,7 +19,8 @@ import {
   type RetrievalProgressStep,
 } from '../../services/manual-retrieval';
 import type { VehicleLookup } from '../../types/manual';
-import { colors, radii } from '../../theme/tokens';
+import { radii } from '../../theme/tokens';
+import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
 
 type LookupMode = 'vin' | 'manual';
@@ -42,6 +43,7 @@ const PROGRESS_LABELS: Record<RetrievalProgressStep, string> = {
 };
 
 export default function ManualsScreen() {
+  const { colors } = useTheme();
   const [lookupMode, setLookupMode] = useState<LookupMode>('vin');
   const [vinInput, setVinInput] = useState('');
   const [yearInput, setYearInput] = useState('');
@@ -120,6 +122,194 @@ export default function ManualsScreen() {
     }
     Linking.openURL(url).catch(() => Alert.alert('Unable to open link', 'Please try again.'));
   };
+
+  const styles = StyleSheet.create({
+    scroll: { flex: 1 },
+    content: { padding: 16, gap: 12 },
+    card: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      backgroundColor: colors.surface,
+      padding: 16,
+      gap: 10,
+    },
+    cardTitle: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.heading,
+      fontSize: typeScale.md,
+    },
+    cardSubtitle: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
+    modeRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    modeButton: {
+      minHeight: 40,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.full,
+      backgroundColor: colors.surfaceAlt,
+      paddingHorizontal: 14,
+      justifyContent: 'center',
+    },
+    modeButtonActive: {
+      borderColor: colors.brandAccent,
+      backgroundColor: 'rgba(51, 214, 210, 0.14)',
+    },
+    modeText: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
+    modeTextActive: {
+      color: colors.textPrimary,
+    },
+    formSection: {
+      gap: 8,
+    },
+    label: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
+    input: {
+      minHeight: 44,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      backgroundColor: colors.surfaceAlt,
+      color: colors.textPrimary,
+      paddingHorizontal: 12,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.md,
+    },
+    errorText: {
+      color: '#FCA5A5',
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
+    primaryButton: {
+      minHeight: 44,
+      borderRadius: radii.md,
+      backgroundColor: colors.brandAccent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 8,
+      paddingHorizontal: 14,
+    },
+    primaryButtonText: {
+      color: colors.background,
+      fontFamily: fontFamilies.heading,
+      fontSize: typeScale.sm,
+    },
+    loadingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flex: 1,
+      justifyContent: 'center',
+    },
+    progressText: {
+      color: colors.background,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+      flexShrink: 1,
+    },
+    resultsCard: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      backgroundColor: colors.surface,
+      padding: 12,
+      gap: 10,
+    },
+    emptyText: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
+    resultRow: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      backgroundColor: colors.surfaceAlt,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      gap: 10,
+      alignItems: 'center',
+    },
+    resultTitle: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
+    resultMeta: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+      marginTop: 2,
+    },
+    resultActions: {
+      gap: 8,
+      alignItems: 'flex-end',
+    },
+    secondaryButton: {
+      minHeight: 36,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.full,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    searchButton: {
+      minHeight: 36,
+      borderWidth: 1,
+      borderColor: colors.textSecondary,
+      borderRadius: radii.full,
+      backgroundColor: 'transparent',
+      paddingHorizontal: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    secondaryButtonText: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+    },
+    primaryChip: {
+      minHeight: 36,
+      borderRadius: radii.full,
+      backgroundColor: 'rgba(74, 163, 255, 0.22)',
+      borderWidth: 1,
+      borderColor: colors.actionAccent,
+      paddingHorizontal: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 6,
+    },
+    primaryChipText: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonInteraction: {
+      opacity: 0.92,
+    },
+  });
 
   return (
     <AppShell routeKey="manuals" title="Manuals" subtitle="Retrieve manuals by VIN or vehicle details">
@@ -294,190 +484,3 @@ export default function ManualsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: { flex: 1 },
-  content: { padding: 16, gap: 12 },
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    padding: 16,
-    gap: 10,
-  },
-  cardTitle: {
-    color: colors.textPrimary,
-    fontFamily: fontFamilies.heading,
-    fontSize: typeScale.md,
-  },
-  cardSubtitle: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-  },
-  modeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  modeButton: {
-    minHeight: 40,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.full,
-    backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: 14,
-    justifyContent: 'center',
-  },
-  modeButtonActive: {
-    borderColor: colors.brandAccent,
-    backgroundColor: 'rgba(51, 214, 210, 0.14)',
-  },
-  modeText: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-  },
-  modeTextActive: {
-    color: colors.textPrimary,
-  },
-  formSection: {
-    gap: 8,
-  },
-  label: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-  },
-  input: {
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    backgroundColor: colors.surfaceAlt,
-    color: colors.textPrimary,
-    paddingHorizontal: 12,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.md,
-  },
-  errorText: {
-    color: '#FCA5A5',
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-  },
-  primaryButton: {
-    minHeight: 44,
-    borderRadius: radii.md,
-    backgroundColor: colors.brandAccent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 14,
-  },
-  primaryButtonText: {
-    color: colors.background,
-    fontFamily: fontFamilies.heading,
-    fontSize: typeScale.sm,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-    justifyContent: 'center',
-  },
-  progressText: {
-    color: colors.background,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.xs,
-    flexShrink: 1,
-  },
-  resultsCard: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    padding: 12,
-    gap: 10,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-  },
-  resultRow: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-  },
-  resultTitle: {
-    color: colors.textPrimary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.sm,
-  },
-  resultMeta: {
-    color: colors.textSecondary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.xs,
-    marginTop: 2,
-  },
-  resultActions: {
-    gap: 8,
-    alignItems: 'flex-end',
-  },
-  secondaryButton: {
-    minHeight: 36,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.full,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchButton: {
-    minHeight: 36,
-    borderWidth: 1,
-    borderColor: colors.textSecondary,
-    borderRadius: radii.full,
-    backgroundColor: 'transparent',
-    paddingHorizontal: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: colors.textPrimary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.xs,
-  },
-  primaryChip: {
-    minHeight: 36,
-    borderRadius: radii.full,
-    backgroundColor: 'rgba(74, 163, 255, 0.22)',
-    borderWidth: 1,
-    borderColor: colors.actionAccent,
-    paddingHorizontal: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  primaryChipText: {
-    color: colors.textPrimary,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.xs,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonInteraction: {
-    opacity: 0.92,
-  },
-});

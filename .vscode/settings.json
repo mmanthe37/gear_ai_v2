@@ -9,5 +9,6 @@
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
     "files.autoSave": "onWindowChange",
-    "workbench.editor.enablePreview": true
+    "workbench.editor.enablePreview": true,
+    "editor.autoIndentOnPasteWithinString": false
 }

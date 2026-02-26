@@ -2,10 +2,23 @@ import { Redirect } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import GearLogo from '../components/branding/GearLogo';
 import { useAuth } from '../contexts/AuthContext';
-import { colors } from '../theme/tokens';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function Index() {
+  const { colors } = useTheme();
   const { user, loading } = useAuth();
+
+  const styles = StyleSheet.create({
+    loadingState: {
+      flex: 1,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingLogo: {
+      marginBottom: 14,
+    },
+  });
 
   if (loading) {
     return (
@@ -22,15 +35,3 @@ export default function Index() {
 
   return <Redirect href="/garage" />;
 }
-
-const styles = StyleSheet.create({
-  loadingState: {
-    flex: 1,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingLogo: {
-    marginBottom: 14,
-  },
-});

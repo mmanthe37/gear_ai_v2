@@ -15,10 +15,12 @@ import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../contexts/AuthContext';
 import { decodeVIN } from '../../services/vin-decoder';
 import { canAddVehicle, createVehicle } from '../../services/vehicle-service';
-import { colors, radii } from '../../theme/tokens';
+import { radii } from '../../theme/tokens';
+import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
 
 export default function NewVehicleScreen() {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
@@ -100,6 +102,117 @@ export default function NewVehicleScreen() {
       setSaving(false);
     }
   };
+
+  const styles = StyleSheet.create({
+    scroll: {
+      flex: 1,
+    },
+    content: {
+      padding: 16,
+    },
+    formCard: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      padding: 16,
+      gap: 12,
+      maxWidth: 760,
+      width: '100%',
+      alignSelf: 'center',
+    },
+    title: {
+      color: colors.textPrimary,
+      fontSize: typeScale.xl,
+      fontFamily: fontFamilies.heading,
+    },
+    subtitle: {
+      color: colors.textSecondary,
+      fontSize: typeScale.sm,
+      fontFamily: fontFamilies.body,
+      marginBottom: 4,
+    },
+    inputGroup: {
+      gap: 6,
+    },
+    label: {
+      color: colors.textSecondary,
+      fontSize: typeScale.sm,
+      fontFamily: fontFamilies.body,
+    },
+    input: {
+      minHeight: 44,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      backgroundColor: colors.surfaceAlt,
+      color: colors.textPrimary,
+      paddingHorizontal: 12,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.md,
+    },
+    inlineInput: {
+      minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    inlineInputField: {
+      flex: 1,
+    },
+    inlineRow: {
+      flexDirection: 'row',
+      gap: 10,
+      flexWrap: 'wrap',
+    },
+    inlineColumn: {
+      minWidth: 220,
+      flex: 1,
+    },
+    actions: {
+      marginTop: 10,
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 10,
+      flexWrap: 'wrap',
+    },
+    secondaryButton: {
+      minHeight: 44,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      backgroundColor: colors.surfaceAlt,
+      paddingHorizontal: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    secondaryButtonText: {
+      color: colors.textPrimary,
+      fontSize: typeScale.sm,
+      fontFamily: fontFamilies.body,
+    },
+    primaryButton: {
+      minHeight: 44,
+      borderRadius: radii.md,
+      backgroundColor: colors.brandAccent,
+      paddingHorizontal: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 8,
+    },
+    primaryButtonText: {
+      color: colors.background,
+      fontSize: typeScale.sm,
+      fontFamily: fontFamilies.heading,
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonInteraction: {
+      opacity: 0.92,
+    },
+  });
 
   return (
     <AppShell routeKey="garage-new" title="Add Vehicle" subtitle="Create a new garage entry">
@@ -244,113 +357,3 @@ export default function NewVehicleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-  },
-  formCard: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: 16,
-    gap: 12,
-    maxWidth: 760,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  title: {
-    color: colors.textPrimary,
-    fontSize: typeScale.xl,
-    fontFamily: fontFamilies.heading,
-  },
-  subtitle: {
-    color: colors.textSecondary,
-    fontSize: typeScale.sm,
-    fontFamily: fontFamilies.body,
-    marginBottom: 4,
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  label: {
-    color: colors.textSecondary,
-    fontSize: typeScale.sm,
-    fontFamily: fontFamilies.body,
-  },
-  input: {
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    backgroundColor: colors.surfaceAlt,
-    color: colors.textPrimary,
-    paddingHorizontal: 12,
-    fontFamily: fontFamilies.body,
-    fontSize: typeScale.md,
-  },
-  inlineInput: {
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  inlineInputField: {
-    flex: 1,
-  },
-  inlineRow: {
-    flexDirection: 'row',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  inlineColumn: {
-    minWidth: 220,
-    flex: 1,
-  },
-  actions: {
-    marginTop: 10,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  secondaryButton: {
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: colors.textPrimary,
-    fontSize: typeScale.sm,
-    fontFamily: fontFamilies.body,
-  },
-  primaryButton: {
-    minHeight: 44,
-    borderRadius: radii.md,
-    backgroundColor: colors.brandAccent,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  primaryButtonText: {
-    color: colors.background,
-    fontSize: typeScale.sm,
-    fontFamily: fontFamilies.heading,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonInteraction: {
-    opacity: 0.92,
-  },
-});

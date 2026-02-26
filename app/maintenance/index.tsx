@@ -43,8 +43,9 @@ import type {
   MaintenanceInterval,
 } from '../../types/maintenance';
 import type { Vehicle } from '../../types/vehicle';
-import { colors, radii } from '../../theme/tokens';
+import { radii } from '../../theme/tokens';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // ---------------------------------------------------------------------------
 // Severity helpers
@@ -113,6 +114,7 @@ const PART_CATEGORIES: InstalledPart['category'][] = [
 // ---------------------------------------------------------------------------
 
 export default function MaintenanceScreen() {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [loading, setLoading] = useState(false);
@@ -795,6 +797,7 @@ export default function MaintenanceScreen() {
   // Main render
   // ---------------------------------------------------------------------------
 
+  const styles = makeStyles(colors);
   return (
     <AppShell routeKey="maintenance" title="Maintenance" subtitle="Track repairs, services & costs">
       {/* Tab bar */}
@@ -944,7 +947,8 @@ export default function MaintenanceScreen() {
 // Styles
 // ---------------------------------------------------------------------------
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
   tabBar: { borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface, maxHeight: 52 },
   tabBarContent: { paddingHorizontal: 12, gap: 4, alignItems: 'center', height: 52 },
   tabButton: {
@@ -1103,3 +1107,4 @@ const styles = StyleSheet.create({
   secondaryButtonText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
   buttonInteraction: { opacity: 0.88 },
 });
+}

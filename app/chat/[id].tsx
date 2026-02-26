@@ -46,8 +46,9 @@ import type {
   VehicleFullContext,
   ParsedMaintenanceLog,
 } from '../../types/chat';
-import { colors, radii } from '../../theme/tokens';
+import { radii } from '../../theme/tokens';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface Message {
   id: string;
@@ -88,6 +89,7 @@ function formatSessionDate(iso?: string | null): string {
 }
 
 export default function ChatScreen() {
+  const { colors } = useTheme();
   const params = useLocalSearchParams<{
     id: string;
     make?: string;
@@ -655,6 +657,7 @@ export default function ChatScreen() {
     return out;
   }
 
+  const styles = makeStyles(colors);
   return (
     <AppShell routeKey="chat" title={vehicleName} subtitle="Gear AI Vehicle Assistant">
       <KeyboardAvoidingView
@@ -931,7 +934,8 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
@@ -1307,3 +1311,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+}

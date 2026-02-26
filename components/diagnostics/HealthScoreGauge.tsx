@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
-import { colors, radii } from '../../theme/tokens';
+import { radii } from '../../theme/tokens';
+import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
 import type { VehicleHealthScore } from '../../types/diagnostic';
 
@@ -8,13 +9,6 @@ interface Props {
   score: number;
   trend?: VehicleHealthScore['trend'];
   size?: number;
-}
-
-function scoreColor(score: number): string {
-  if (score >= 80) return colors.success;
-  if (score >= 60) return colors.warning;
-  if (score >= 40) return '#F97316'; // orange
-  return colors.danger;
 }
 
 function scoreLabel(score: number): string {
@@ -30,13 +24,55 @@ function trendIcon(trend?: VehicleHealthScore['trend']): string {
   return '→';
 }
 
-function trendColor(trend?: VehicleHealthScore['trend']): string {
-  if (trend === 'improving') return colors.success;
-  if (trend === 'declining') return colors.danger;
-  return colors.textSecondary;
-}
-
 export default function HealthScoreGauge({ score, trend, size = 140 }: Props) {
+  const { colors } = useTheme();
+
+  function scoreColor(s: number): string {
+    if (s >= 80) return colors.success;
+    if (s >= 60) return colors.warning;
+    if (s >= 40) return '#F97316'; // orange
+    return colors.danger;
+  }
+
+  function trendColor(t?: VehicleHealthScore['trend']): string {
+    if (t === 'improving') return colors.success;
+    if (t === 'declining') return colors.danger;
+    return colors.textSecondary;
+  }
+
+  const styles = StyleSheet.create({
+    wrapper: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    ringBg: {
+      position: 'absolute',
+    },
+    ringFg: {
+      position: 'absolute',
+    },
+    inner: {
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 2,
+    },
+    scoreNum: {
+      fontFamily: fontFamilies.heading,
+      lineHeight: undefined,
+    },
+    scoreLabel: {
+      fontFamily: fontFamilies.body,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+    trend: {
+      fontFamily: fontFamilies.body,
+      textTransform: 'capitalize',
+      marginTop: 2,
+    },
+  });
+
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -98,35 +134,3 @@ export default function HealthScoreGauge({ score, trend, size = 140 }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringBg: {
-    position: 'absolute',
-  },
-  ringFg: {
-    position: 'absolute',
-  },
-  inner: {
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  scoreNum: {
-    fontFamily: fontFamilies.heading,
-    lineHeight: undefined,
-  },
-  scoreLabel: {
-    fontFamily: fontFamilies.body,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  trend: {
-    fontFamily: fontFamilies.body,
-    textTransform: 'capitalize',
-    marginTop: 2,
-  },
-});
