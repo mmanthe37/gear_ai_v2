@@ -43,7 +43,7 @@ export default function AppSidebar({
   const styles = StyleSheet.create({
     sidebar: {
       flex: 1,
-      backgroundColor: 'rgba(18, 26, 35, 0.94)',
+      backgroundColor: colors.sidebarBg,
       borderRightWidth: 1,
       borderRightColor: colors.border,
     },
@@ -98,7 +98,7 @@ export default function AppSidebar({
     },
     navItemActive: {
       borderColor: colors.brandAccent,
-      backgroundColor: 'rgba(51, 214, 210, 0.14)',
+      backgroundColor: colors.accentTint,
     },
     navItemInteraction: {
       opacity: 0.92,

@@ -118,19 +118,19 @@ class ErrorBoundary extends Component<Props, State> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: '#1a1a2e',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   errorCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 20,
     padding: 30,
     maxWidth: 500,
     width: '100%',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   title: {
     fontSize: 24,

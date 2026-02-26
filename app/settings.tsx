@@ -908,7 +908,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     paddingHorizontal: 12, paddingVertical: 9,
     borderRadius: radii.md, borderWidth: 1, borderColor: 'transparent',
   },
-  tabActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51,214,210,0.10)' },
+  tabActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
   tabLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   tabLabelActive: { color: colors.brandAccent },
 
@@ -943,7 +943,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     borderRadius: radii.md, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
   },
-  segmentOptActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51,214,210,0.12)' },
+  segmentOptActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
   segmentLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   segmentLabelActive: { color: colors.brandAccent },
 
@@ -953,7 +953,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: radii.full,
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt,
   },
-  chipActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51,214,210,0.12)' },
+  chipActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
   chipText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   chipTextActive: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
 
@@ -964,7 +964,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     borderRadius: radii.md, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
   },
-  themeOptionActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51,214,210,0.10)' },
+  themeOptionActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
   themeOptionLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
 
   // Color swatches
@@ -981,7 +981,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     paddingHorizontal: 10, borderRadius: radii.md, borderWidth: 1,
     borderColor: colors.border, backgroundColor: colors.surfaceAlt,
   },
-  vehicleOptActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51,214,210,0.08)' },
+  vehicleOptActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
   vehicleOptText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, flex: 1 },
 
   // Buttons
@@ -1088,7 +1088,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   exportRow: { flexDirection: 'row', gap: 10 },
   exportBtn: {
     flex: 1, minHeight: 44, borderRadius: radii.md, borderWidth: 1,
-    borderColor: colors.brandAccent, backgroundColor: 'rgba(51,214,210,0.08)',
+    borderColor: colors.brandAccent, backgroundColor: colors.accentTint,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
   exportBtnText: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },

@@ -13,6 +13,16 @@ export const darkColors = {
   success: '#22C55E',
   danger: '#EF4444',
   overlay: 'rgba(4, 8, 12, 0.72)',
+  gradientStart: '#0B1117',
+  gradientMid: '#0E1620',
+  gradientEnd: '#0B1117',
+  headerBg: 'rgba(18, 26, 35, 0.92)',
+  sidebarBg: 'rgba(18, 26, 35, 0.94)',
+  navBg: 'rgba(18, 26, 35, 0.8)',
+  accentTint: 'rgba(51, 214, 210, 0.12)',
+  accentTintStrong: 'rgba(51, 214, 210, 0.16)',
+  cardGlow: 'rgba(30, 144, 255, 0.2)',
+  loadingOverlay: 'rgba(11, 17, 23, 0.35)',
 };
 
 export const lightColors = {
@@ -28,6 +38,16 @@ export const lightColors = {
   success: '#16A34A',
   danger: '#DC2626',
   overlay: 'rgba(15, 23, 42, 0.6)',
+  gradientStart: '#F0F4F8',
+  gradientMid: '#E8EEF4',
+  gradientEnd: '#F0F4F8',
+  headerBg: 'rgba(255, 255, 255, 0.95)',
+  sidebarBg: 'rgba(248, 250, 252, 0.97)',
+  navBg: 'rgba(255, 255, 255, 0.9)',
+  accentTint: 'rgba(14, 165, 233, 0.10)',
+  accentTintStrong: 'rgba(14, 165, 233, 0.16)',
+  cardGlow: 'rgba(14, 165, 233, 0.12)',
+  loadingOverlay: 'rgba(255, 255, 255, 0.5)',
 };
 
 export const amoledColors = {
@@ -43,6 +63,16 @@ export const amoledColors = {
   success: '#22C55E',
   danger: '#EF4444',
   overlay: 'rgba(0, 0, 0, 0.85)',
+  gradientStart: '#000000',
+  gradientMid: '#050505',
+  gradientEnd: '#000000',
+  headerBg: 'rgba(0, 0, 0, 0.95)',
+  sidebarBg: 'rgba(0, 0, 0, 0.97)',
+  navBg: 'rgba(0, 0, 0, 0.9)',
+  accentTint: 'rgba(51, 214, 210, 0.12)',
+  accentTintStrong: 'rgba(51, 214, 210, 0.16)',
+  cardGlow: 'rgba(74, 163, 255, 0.15)',
+  loadingOverlay: 'rgba(0, 0, 0, 0.5)',
 };
 
 /** Backward-compatible alias — do not remove */

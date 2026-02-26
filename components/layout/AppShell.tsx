@@ -129,7 +129,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
       minHeight: shell.headerHeight,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
-      backgroundColor: 'rgba(18, 26, 35, 0.92)',
+      backgroundColor: colors.headerBg,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -210,7 +210,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
       ...StyleSheet.absoluteFillObject,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: 'rgba(11, 17, 23, 0.35)',
+      backgroundColor: colors.loadingOverlay,
     },
   });
 
@@ -230,7 +230,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
   return (
     <View style={styles.root}>
       <LinearGradient
-        colors={['#0B1117', '#0E1620', '#0B1117']}
+        colors={[colors.gradientStart, colors.gradientMid, colors.gradientEnd]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

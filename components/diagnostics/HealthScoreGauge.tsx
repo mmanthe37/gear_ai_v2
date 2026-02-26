@@ -98,7 +98,7 @@ export default function HealthScoreGauge({ score, trend, size = 140 }: Props) {
             height: size,
             borderRadius: size / 2,
             borderWidth: ring,
-            borderColor: 'rgba(255,255,255,0.08)',
+            borderColor: colors.border,
           },
         ]}
       />

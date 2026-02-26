@@ -120,7 +120,7 @@ export default function SymptomCheckerPanel({ onSubmit, history = [] }: Props) {
     section: { gap: 6 },
     sectionLabel: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 1 },
     codeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-    codePill: { backgroundColor: 'rgba(51,214,210,0.12)', borderWidth: 1, borderColor: colors.brandAccent, borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 4 },
+    codePill: { backgroundColor: colors.accentTint, borderWidth: 1, borderColor: colors.brandAccent, borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 4 },
     codePillText: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.xs },
     bulletItem: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, lineHeight: 20 },
     flowStep: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, padding: 10, gap: 6 },

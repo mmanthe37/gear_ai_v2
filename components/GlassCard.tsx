@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface GlassCardProps {
   children: React.ReactNode;
@@ -15,9 +16,12 @@ export default function GlassCard({
   children,
   style,
   intensity = 25,
-  tint = 'dark',
+  tint,
   variant = 'default'
 }: GlassCardProps) {
+  const { theme, colors } = useTheme();
+  const resolvedTint = tint ?? (theme === 'light' ? 'light' : 'dark');
+
   const getGradientColors = (): readonly [string, string, string] => {
     switch (variant) {
       case 'performance':
@@ -40,9 +44,9 @@ export default function GlassCard({
         ] as const;
       default:
         return [
-          'rgba(30, 144, 255, 0.25)',
-          'rgba(0, 191, 255, 0.15)',
-          'rgba(30, 144, 255, 0.1)'
+          `${colors.cardGlow}`,
+          `${colors.cardGlow}80`,
+          `${colors.cardGlow}40`
         ] as const;
     }
   };
@@ -56,15 +60,41 @@ export default function GlassCard({
       case 'success':
         return 'rgba(76, 175, 80, 0.4)';
       default:
-        return 'rgba(30, 144, 255, 0.3)';
+        return colors.border;
     }
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      borderRadius: 16,
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: theme === 'light' ? 0.1 : 0.25,
+      shadowRadius: 32,
+      elevation: 12,
+    },
+    blur: {
+      flex: 1,
+      borderRadius: 16,
+    },
+    gradient: {
+      flex: 1,
+      borderRadius: 16,
+      borderWidth: 1.5,
+      backgroundColor: colors.surface,
+    },
+    content: {
+      flex: 1,
+      padding: 20,
+    },
+  });
 
   return (
     <View style={[styles.container, style]}>
       <BlurView
         intensity={intensity}
-        tint={tint}
+        tint={resolvedTint}
         style={styles.blur}
       >
         <LinearGradient
@@ -81,29 +111,3 @@ export default function GlassCard({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 32,
-    elevation: 12,
-  },
-  blur: {
-    flex: 1,
-    borderRadius: 16,
-  },
-  gradient: {
-    flex: 1,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-});

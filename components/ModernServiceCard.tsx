@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface ModernServiceCardProps {
   title: string;
@@ -33,18 +34,108 @@ export default function ModernServiceCard({
   vehicle,
   onPress,
 }: ModernServiceCardProps) {
+  const { theme, colors } = useTheme();
+  const blurTint = theme === 'light' ? 'light' : 'dark';
   const priorityColor = priorityColors[priority];
   const priorityIcon = priorityIcons[priority];
 
+  const styles = StyleSheet.create({
+    container: {
+      marginBottom: 12,
+      borderRadius: 16,
+      overflow: 'hidden',
+      shadowColor: colors.actionAccent,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: theme === 'light' ? 0.12 : 0.25,
+      shadowRadius: 16,
+      elevation: 8,
+    },
+    blur: {
+      borderRadius: 16,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+    },
+    gradient: {
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+    },
+    content: {
+      padding: 16,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    iconContainer: {
+      marginRight: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+    },
+    iconGradient: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    mainContent: {
+      flex: 1,
+    },
+    title: {
+      fontSize: 17,
+      fontWeight: '800',
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    description: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginBottom: 4,
+      fontWeight: '500',
+    },
+    vehicle: {
+      fontSize: 12,
+      color: colors.actionAccent,
+      fontWeight: '600',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    dateContainer: {
+      alignItems: 'flex-end',
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: 8,
+      padding: 8,
+    },
+    dueDate: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: colors.textPrimary,
+    },
+    dueLabel: {
+      fontSize: 10,
+      color: colors.warning,
+      marginTop: 2,
+      fontWeight: '700',
+      letterSpacing: 1,
+    },
+    progressBar: {
+      height: 3,
+      borderRadius: 2,
+      overflow: 'hidden',
+    },
+    progressGradient: {
+      flex: 1,
+    },
+  });
+
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
-      <BlurView intensity={25} tint="dark" style={styles.blur}>
+      <BlurView intensity={25} tint={blurTint} style={styles.blur}>
         <LinearGradient
-          colors={[
-            'rgba(30, 144, 255, 0.2)',
-            'rgba(0, 191, 255, 0.1)',
-            'rgba(30, 144, 255, 0.05)'
-          ]}
+          colors={[colors.cardGlow, `${colors.cardGlow}80`, `${colors.cardGlow}30`]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.gradient}
@@ -86,98 +177,3 @@ export default function ModernServiceCard({
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 12,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#1E90FF',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  blur: {
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(30, 144, 255, 0.3)',
-  },
-  gradient: {
-    borderRadius: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  content: {
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  iconContainer: {
-    marginRight: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  iconGradient: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mainContent: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 4,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  description: {
-    fontSize: 13,
-    color: '#E0E0E0',
-    marginBottom: 4,
-    fontWeight: '500',
-  },
-  vehicle: {
-    fontSize: 12,
-    color: '#1E90FF',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  dateContainer: {
-    alignItems: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 8,
-    padding: 8,
-  },
-  dueDate: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  dueLabel: {
-    fontSize: 10,
-    color: '#FF8C00',
-    marginTop: 2,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  progressBar: {
-    height: 3,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressGradient: {
-    flex: 1,
-  },
-});

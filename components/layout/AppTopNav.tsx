@@ -21,7 +21,7 @@ export default function AppTopNav({ routeKey }: AppTopNavProps) {
       borderTopWidth: 1,
       borderBottomWidth: 1,
       borderColor: colors.border,
-      backgroundColor: 'rgba(18, 26, 35, 0.8)',
+      backgroundColor: colors.navBg,
       minHeight: 56,
       justifyContent: 'center',
     },
@@ -51,7 +51,7 @@ export default function AppTopNav({ routeKey }: AppTopNavProps) {
       backgroundColor: colors.surface,
     },
     buttonActive: {
-      backgroundColor: 'rgba(51, 214, 210, 0.16)',
+      backgroundColor: colors.accentTintStrong,
       borderColor: colors.brandAccent,
     },
     buttonInteraction: {
