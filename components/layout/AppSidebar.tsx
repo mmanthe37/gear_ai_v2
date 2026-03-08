@@ -16,6 +16,7 @@ interface AppSidebarProps {
   chats: SidebarChatItem[];
   onToggleCollapse?: () => void;
   onCloseMobile?: () => void;
+  onSignOut?: () => Promise<void> | void;
 }
 
 function formatMileage(value?: number): string {
@@ -30,6 +31,7 @@ export default function AppSidebar({
   chats,
   onToggleCollapse,
   onCloseMobile,
+  onSignOut,
 }: AppSidebarProps) {
   const { colors } = useTheme();
   const activeKey = getTopNavActiveKey(routeKey);
@@ -151,6 +153,7 @@ export default function AppSidebar({
       borderTopWidth: 1,
       borderTopColor: colors.border,
       padding: 10,
+      gap: 10,
     },
     collapseButton: {
       minHeight: 44,
@@ -165,6 +168,22 @@ export default function AppSidebar({
     },
     collapseLabel: {
       color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
+    signOutButton: {
+      minHeight: 44,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceAlt,
+      paddingHorizontal: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    signOutLabel: {
+      color: colors.danger,
       fontFamily: fontFamilies.body,
       fontSize: typeScale.sm,
     },
@@ -283,6 +302,28 @@ export default function AppSidebar({
       </ScrollView>
 
       <View style={styles.footer}>
+        {onSignOut && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={async () => {
+              try {
+                await onSignOut();
+                onCloseMobile?.();
+              } catch (error) {
+                console.error('Sign out failed:', error);
+              }
+            }}
+            style={({ pressed }) => [
+              styles.signOutButton,
+              collapsed && styles.navItemCollapsed,
+              pressed && styles.navItemInteraction,
+            ]}
+          >
+            <Ionicons name="log-out-outline" size={18} color={colors.danger} />
+            {!collapsed && <Text style={styles.signOutLabel}>Sign Out</Text>}
+          </Pressable>
+        )}
+
         <Pressable
           accessibilityRole="button"
           style={({ pressed }) => [
@@ -317,4 +358,3 @@ export default function AppSidebar({
     </View>
   );
 }
-

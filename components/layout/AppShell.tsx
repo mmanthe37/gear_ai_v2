@@ -35,7 +35,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
   const { colors } = useTheme();
   const pathname = usePathname();
   const { width } = useWindowDimensions();
-  const { user, loading } = useAuth();
+  const { session, user, loading, signOut } = useAuth();
   const {
     isDesktop,
     isMobile,
@@ -223,7 +223,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
     );
   }
 
-  if (!user) {
+  if (!session) {
     return <Redirect href="/login" />;
   }
 
@@ -244,6 +244,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
             vehicles={vehicles}
             chats={chats}
             onToggleCollapse={toggleSidebarCollapsed}
+            onSignOut={signOut}
           />
         </View>
       )}
@@ -292,7 +293,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
           >
             <GearActionIcon size="md" />
             <Text style={styles.accountButtonLabel} numberOfLines={1}>
-              {user.display_name || 'Account'}
+              {user?.display_name || 'Account'}
             </Text>
           </Pressable>
         </View>
@@ -312,6 +313,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
               vehicles={vehicles}
               chats={chats}
               onCloseMobile={closeMobileSidebar}
+              onSignOut={signOut}
             />
             {isSidebarLoading && (
               <View style={styles.mobileLoadingOverlay}>
@@ -324,4 +326,3 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
     </View>
   );
 }
-

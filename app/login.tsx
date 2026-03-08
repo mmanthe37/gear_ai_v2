@@ -11,7 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import GearLogo from '../components/branding/GearLogo';
 import { useAuth } from '../contexts/AuthContext';
 import { radii } from '../theme/tokens';
@@ -25,10 +25,12 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, session } = useAuth();
 
   const handleSubmit = async () => {
+    setSuccessMessage('');
     if (!email || !password) {
       Alert.alert('Error', 'Please enter your email and password.');
       return;
@@ -43,11 +45,12 @@ export default function LoginScreen() {
     try {
       if (isSignUp) {
         await signUp({ email, password, display_name: displayName || undefined });
-        Alert.alert(
-          'Check your email',
-          'A confirmation link has been sent to ' + email + '. Please confirm your email then sign in.',
-          [{ text: 'OK', onPress: () => setIsSignUp(false) }]
+        setSuccessMessage(
+          `Account created. We sent a confirmation link to ${email}. Confirm your email, then sign in below.`
         );
+        setIsSignUp(false);
+        setPassword('');
+        setDisplayName('');
         return;
       } else {
         await signIn({ email, password });
@@ -170,7 +173,28 @@ export default function LoginScreen() {
     buttonInteraction: {
       opacity: 0.92,
     },
+    successBanner: {
+      borderWidth: 1,
+      borderColor: colors.success,
+      backgroundColor: 'rgba(34, 197, 94, 0.12)',
+      padding: 12,
+      borderRadius: radii.md,
+      gap: 4,
+    },
+    successText: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
+    successHighlight: {
+      color: colors.success,
+      fontFamily: fontFamilies.heading,
+    },
   });
+
+  if (session) {
+    return <Redirect href="/garage" />;
+  }
 
   return (
     <View style={styles.container}>
@@ -201,6 +225,15 @@ export default function LoginScreen() {
               <Text style={styles.cardTitle}>{isSignUp ? 'Create Account' : 'Sign In'}</Text>
               <GearLogo variant="micro" size="md" />
             </View>
+
+            {!!successMessage && (
+              <View style={styles.successBanner}>
+                <Text style={styles.successText}>
+                  <Text style={styles.successHighlight}>Success: </Text>
+                  {successMessage}
+                </Text>
+              </View>
+            )}
 
             {isSignUp && (
               <View style={styles.inputGroup}>
@@ -264,7 +297,10 @@ export default function LoginScreen() {
             <Pressable
               accessibilityRole="button"
               style={({ pressed }) => [styles.toggle, pressed && styles.buttonInteraction]}
-              onPress={() => setIsSignUp((prev) => !prev)}
+              onPress={() => {
+                setSuccessMessage('');
+                setIsSignUp((prev) => !prev);
+              }}
               disabled={isLoading}
             >
               <Text style={styles.toggleText}>
@@ -277,4 +313,3 @@ export default function LoginScreen() {
     </View>
   );
 }
-
