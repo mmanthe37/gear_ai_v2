@@ -54,6 +54,15 @@ export default function NewVehicleScreen() {
     }
   };
 
+  const runWithTimeout = async <T,>(promise: Promise<T>, label: string, ms = 12000): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`${label} timed out. Check your connection and try again.`)), ms)
+      ),
+    ]);
+  };
+
   const handleSave = async () => {
     if (!user?.user_id) {
       Alert.alert('Authentication required', 'Please sign in to add a vehicle.');
@@ -79,12 +88,12 @@ export default function NewVehicleScreen() {
 
     setSaving(true);
     try {
-      const { canAdd, tier } = await canAddVehicle(user.user_id);
+      const { canAdd, tier } = await runWithTimeout(canAddVehicle(user.user_id), 'Vehicle eligibility check');
       if (!canAdd) {
         throw new Error(`Vehicle limit reached for ${tier} tier.`);
       }
 
-      await createVehicle(user.user_id, {
+      await runWithTimeout(createVehicle(user.user_id, {
         vin: vin || undefined,
         year: parsedYear,
         make: make.trim(),
@@ -93,10 +102,11 @@ export default function NewVehicleScreen() {
         nickname: nickname.trim() || undefined,
         color: color.trim() || undefined,
         license_plate: licensePlate.trim() || undefined,
-      });
+      }), 'Save vehicle');
 
       router.replace('/garage');
     } catch (error: any) {
+      console.error('[Garage] Save vehicle failed:', error);
       Alert.alert('Unable to save vehicle', error?.message || 'Please try again.');
     } finally {
       setSaving(false);
@@ -356,4 +366,3 @@ export default function NewVehicleScreen() {
     </AppShell>
   );
 }
-
