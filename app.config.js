@@ -60,7 +60,7 @@ module.exports = {
       // Supabase Configuration (EXPO_PUBLIC_ prefix is read directly by the bundler; extra is a fallback)
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      openaiApiKey: process.env.OPENAI_API_KEY,
+      openaiApiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
     },
   },
 };

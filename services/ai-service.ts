@@ -156,11 +156,17 @@ function buildRecallContext(
 export async function generateAIResponse(
   request: AIRequest
 ): Promise<AIResponse> {
-  const apiKey = Constants.expoConfig?.extra?.openaiApiKey || process.env.OPENAI_API_KEY;
+  const apiKey =
+    process.env.EXPO_PUBLIC_OPENAI_API_KEY ||
+    Constants.expoConfig?.extra?.openaiApiKey ||
+    process.env.OPENAI_API_KEY;
 
   // If no API key, fall back to intelligent template response
   if (!apiKey) {
-    return generateTemplateResponse(request);
+    console.error(
+      '[AI Service] No OpenAI API key found. Set EXPO_PUBLIC_OPENAI_API_KEY or OPENAI_API_KEY. Returning offline template.'
+    );
+    return generateTemplateResponse(request, true);
   }
 
   let ragSources: RAGSource[] = [];
@@ -255,8 +261,8 @@ export async function generateAIResponse(
 
     if (!res.ok) {
       const errBody = await res.text();
-      console.warn('[AI Service] OpenAI API error:', res.status, errBody);
-      return generateTemplateResponse(request);
+      console.error('[AI Service] OpenAI API error:', res.status, errBody);
+      throw new Error(`OpenAI API error ${res.status}: ${errBody.slice(0, 200)}`);
     }
 
     const json = await res.json();
@@ -271,8 +277,8 @@ export async function generateAIResponse(
       created_at: new Date().toISOString(),
     };
   } catch (err) {
-    console.warn('[AI Service] OpenAI request failed:', err);
-    return generateTemplateResponse(request);
+    console.error('[AI Service] OpenAI request failed:', err);
+    throw err;
   }
 }
 
@@ -280,8 +286,10 @@ export async function generateAIResponse(
 // Template-based fallback (no API key)
 // ---------------------------------------------------------------------------
 
-function generateTemplateResponse(request: AIRequest): AIResponse {
-  const content = getSmartTemplateResponse(request.message);
+function generateTemplateResponse(request: AIRequest, isOffline = false): AIResponse {
+  const content = isOffline
+    ? '⚠️ AI service is currently unavailable (API key not configured). Please contact the app administrator. In the meantime, here\'s some general guidance:\n\n' + getSmartTemplateResponse(request.message)
+    : getSmartTemplateResponse(request.message);
   return {
     message_id: generateUUID(),
     content,

@@ -439,12 +439,14 @@ export default function ChatScreen() {
 
       persistMessage('assistant', response.content);
     } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[Chat] AI response generation failed:', errMsg);
       setMessages((prev) =>
         prev.map((message) =>
           message.id === loadingId
             ? {
                 ...message,
-                text: 'I hit an error while generating a response. Please try again.',
+                text: `⚠️ I couldn't generate a response: ${errMsg.slice(0, 150)}. Please try again.`,
                 isLoading: false,
               }
             : message
