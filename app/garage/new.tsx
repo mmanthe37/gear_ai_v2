@@ -15,7 +15,7 @@ import GearActionIcon from '../../components/branding/GearActionIcon';
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../contexts/AuthContext';
 import { decodeVIN } from '../../services/vin-decoder';
-import { createVehicle } from '../../services/vehicle-service';
+import { canAddVehicle, createVehicle } from '../../services/vehicle-service';
 import { radii } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
@@ -99,26 +99,26 @@ export default function NewVehicleScreen() {
 
     setSaving(true);
     try {
+      console.log('[Garage] Checking vehicle eligibility for user', user.user_id);
+      const { canAdd, tier } = await canAddVehicle(user.user_id);
+      console.log('[Garage] canAddVehicle result:', { canAdd, tier });
+      if (!canAdd) {
+        throw new Error(`Vehicle limit reached for ${tier} tier. Upgrade your plan to add more vehicles.`);
+      }
+
       const vinToSave = vin.length === 17 ? vin : undefined;
       console.log('[Garage] Creating vehicle — VIN:', vinToSave ?? '(none)', 'Make:', make, 'Model:', model, 'Year:', parsedYear);
 
-      const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Request timed out. Please check your connection and try again.')), 10000)
-      );
-
-      await Promise.race([
-        createVehicle(user.user_id, {
-          vin: vinToSave,
-          year: parsedYear,
-          make: make.trim(),
-          model: model.trim(),
-          mileage: parsedMileage,
-          nickname: nickname.trim() || undefined,
-          color: color.trim() || undefined,
-          license_plate: licensePlate.trim() || undefined,
-        }),
-        timeout,
-      ]);
+      await createVehicle(user.user_id, {
+        vin: vinToSave,
+        year: parsedYear,
+        make: make.trim(),
+        model: model.trim(),
+        mileage: parsedMileage,
+        nickname: nickname.trim() || undefined,
+        color: color.trim() || undefined,
+        license_plate: licensePlate.trim() || undefined,
+      });
 
       console.log('[Garage] Vehicle created successfully — navigating to /garage');
       router.replace('/garage');

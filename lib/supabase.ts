@@ -5,6 +5,7 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
 // EXPO_PUBLIC_* vars are the only ones reliably inlined by Expo's Metro bundler.
@@ -24,12 +25,36 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.log('[Supabase] OK — URL:', supabaseUrl, '| Key starts with:', supabaseAnonKey.slice(0, 10) + '...');
 }
 
+/**
+ * In-memory promise-chain lock that replaces Navigator LockManager.
+ *
+ * The default Supabase auth client uses `navigator.locks` on web for
+ * cross-tab token synchronization. This causes deadlocks when
+ * `onAuthStateChange` fires during `getSession()` because both
+ * compete for the same exclusive lock, producing the error:
+ *   "Acquiring an exclusive Navigator LockManager lock … timed out"
+ *
+ * This simple serialization lock avoids `navigator.locks` entirely
+ * while still preventing concurrent auth operations from racing.
+ */
+const _lockChains: Record<string, Promise<unknown>> = {};
+
+function webSafeLock<R>(name: string, _acquireTimeout: number, fn: () => Promise<R>): Promise<R> {
+  const chain = (_lockChains[name] ?? Promise.resolve())
+    .catch(() => {})
+    .then(fn);
+  _lockChains[name] = chain;
+  return chain;
+}
+
 // Create Supabase client
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    storage: AsyncStorage,
+    lock: webSafeLock,
   },
   global: {
     // Fail fast — don't hang on network issues
