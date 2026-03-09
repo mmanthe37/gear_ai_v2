@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -32,6 +33,7 @@ export default function NewVehicleScreen() {
   const [licensePlate, setLicensePlate] = useState('');
   const [saving, setSaving] = useState(false);
   const [decoding, setDecoding] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleVinChange = async (text: string) => {
     const normalized = text.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
@@ -63,26 +65,34 @@ export default function NewVehicleScreen() {
     ]);
   };
 
+  const notifyError = (message: string, title: string = 'Unable to save vehicle') => {
+    setErrorMessage(message);
+    if (Platform.OS !== 'web') {
+      Alert.alert(title, message);
+    }
+  };
+
   const handleSave = async () => {
+    setErrorMessage('');
     if (!user?.user_id) {
-      Alert.alert('Authentication required', 'Please sign in to add a vehicle.');
+      notifyError('Please sign in to add a vehicle.', 'Authentication required');
       return;
     }
 
     if (!make || !model || !year) {
-      Alert.alert('Missing fields', 'Make, model, and year are required.');
+      notifyError('Make, model, and year are required.', 'Missing fields');
       return;
     }
 
     const parsedYear = parseInt(year, 10);
     const parsedMileage = mileage ? parseInt(mileage, 10) : undefined;
     if (Number.isNaN(parsedYear) || parsedYear < 1900 || parsedYear > new Date().getFullYear() + 1) {
-      Alert.alert('Invalid year', 'Please enter a valid model year.');
+      notifyError('Please enter a valid model year.', 'Invalid year');
       return;
     }
 
     if (parsedMileage !== undefined && (Number.isNaN(parsedMileage) || parsedMileage < 0)) {
-      Alert.alert('Invalid mileage', 'Please enter a valid mileage amount.');
+      notifyError('Please enter a valid mileage amount.', 'Invalid mileage');
       return;
     }
 
@@ -107,7 +117,7 @@ export default function NewVehicleScreen() {
       router.replace('/garage');
     } catch (error: any) {
       console.error('[Garage] Save vehicle failed:', error);
-      Alert.alert('Unable to save vehicle', error?.message || 'Please try again.');
+      notifyError(error?.message || 'Please try again.');
     } finally {
       setSaving(false);
     }
@@ -216,6 +226,19 @@ export default function NewVehicleScreen() {
       fontSize: typeScale.sm,
       fontFamily: fontFamilies.heading,
     },
+    errorBanner: {
+      borderWidth: 1,
+      borderColor: colors.danger,
+      backgroundColor: 'rgba(220, 38, 38, 0.12)',
+      borderRadius: radii.md,
+      padding: 10,
+      marginBottom: 6,
+    },
+    errorText: {
+      color: colors.danger,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.sm,
+    },
     buttonDisabled: {
       opacity: 0.6,
     },
@@ -230,6 +253,12 @@ export default function NewVehicleScreen() {
         <View style={styles.formCard}>
           <Text style={styles.title}>Vehicle Profile</Text>
           <Text style={styles.subtitle}>Use a VIN to auto-fill fields, or enter details manually.</Text>
+
+          {!!errorMessage && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          )}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>VIN</Text>
