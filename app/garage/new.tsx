@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -34,6 +34,7 @@ export default function NewVehicleScreen() {
   const [saving, setSaving] = useState(false);
   const [decoding, setDecoding] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const scrollRef = useRef<ScrollView>(null);
 
   const handleVinChange = async (text: string) => {
     const normalized = text.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
@@ -56,24 +57,19 @@ export default function NewVehicleScreen() {
     }
   };
 
-  const runWithTimeout = async <T,>(promise: Promise<T>, label: string, ms = 12000): Promise<T> => {
-    return Promise.race([
-      promise,
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`${label} timed out. Check your connection and try again.`)), ms)
-      ),
-    ]);
-  };
-
   const notifyError = (message: string, title: string = 'Unable to save vehicle') => {
+    console.error(`[Garage] ${title}: ${message}`);
     setErrorMessage(message);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
     if (Platform.OS !== 'web') {
       Alert.alert(title, message);
     }
   };
 
   const handleSave = async () => {
+    console.log('[Garage] handleSave called');
     setErrorMessage('');
+
     if (!user?.user_id) {
       notifyError('Please sign in to add a vehicle.', 'Authentication required');
       return;
@@ -81,6 +77,11 @@ export default function NewVehicleScreen() {
 
     if (!make || !model || !year) {
       notifyError('Make, model, and year are required.', 'Missing fields');
+      return;
+    }
+
+    if (vin && vin.length !== 17) {
+      notifyError('VIN must be exactly 17 characters, or leave it blank.', 'Invalid VIN');
       return;
     }
 
@@ -97,14 +98,19 @@ export default function NewVehicleScreen() {
     }
 
     setSaving(true);
+    console.log('[Garage] Checking vehicle eligibility for user', user.user_id);
     try {
-      const { canAdd, tier } = await runWithTimeout(canAddVehicle(user.user_id), 'Vehicle eligibility check');
+      const { canAdd, tier } = await canAddVehicle(user.user_id);
+      console.log('[Garage] canAddVehicle result:', { canAdd, tier });
       if (!canAdd) {
-        throw new Error(`Vehicle limit reached for ${tier} tier.`);
+        throw new Error(`Vehicle limit reached for ${tier} tier. Upgrade your plan to add more vehicles.`);
       }
 
-      await runWithTimeout(createVehicle(user.user_id, {
-        vin: vin || undefined,
+      const vinToSave = vin.length === 17 ? vin : undefined;
+      console.log('[Garage] Creating vehicle — VIN:', vinToSave ?? '(none)', 'Make:', make, 'Model:', model, 'Year:', parsedYear);
+
+      await createVehicle(user.user_id, {
+        vin: vinToSave,
         year: parsedYear,
         make: make.trim(),
         model: model.trim(),
@@ -112,12 +118,13 @@ export default function NewVehicleScreen() {
         nickname: nickname.trim() || undefined,
         color: color.trim() || undefined,
         license_plate: licensePlate.trim() || undefined,
-      }), 'Save vehicle');
+      });
 
+      console.log('[Garage] Vehicle created successfully — navigating to /garage');
       router.replace('/garage');
     } catch (error: any) {
       console.error('[Garage] Save vehicle failed:', error);
-      notifyError(error?.message || 'Please try again.');
+      notifyError(error?.message || 'Something went wrong. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -249,7 +256,7 @@ export default function NewVehicleScreen() {
 
   return (
     <AppShell routeKey="garage-new" title="Add Vehicle" subtitle="Create a new garage entry">
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.formCard}>
           <Text style={styles.title}>Vehicle Profile</Text>
           <Text style={styles.subtitle}>Use a VIN to auto-fill fields, or enter details manually.</Text>
@@ -357,6 +364,12 @@ export default function NewVehicleScreen() {
               />
             </View>
           </View>
+
+          {!!errorMessage && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          )}
 
           <View style={styles.actions}>
             <Pressable

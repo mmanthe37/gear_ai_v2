@@ -16,9 +16,8 @@ export async function createVehicle(
   vehicleData: VehicleFormData
 ): Promise<Vehicle> {
   try {
-    const newVehicle = {
+    const newVehicle: Record<string, unknown> = {
       user_id: userId,
-      vin: vehicleData.vin || '',
       year: vehicleData.year,
       make: vehicleData.make,
       model: vehicleData.model,
@@ -32,6 +31,9 @@ export async function createVehicle(
       status: vehicleData.status || 'active',
       is_active: true,
     };
+    if (vehicleData.vin && vehicleData.vin.length === 17) {
+      newVehicle.vin = vehicleData.vin;
+    }
 
     const { data, error } = await supabase
       .from('vehicles')
