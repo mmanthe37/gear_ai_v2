@@ -31,12 +31,14 @@ import {
   findIndexedManual,
 } from './manual-retrieval';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const OPENAI_CHAT_URL = 'https://api.openai.com/v1/chat/completions';
+const PROXY_PATH = '/api/chat';
 const DEFAULT_MODEL = 'gpt-4.1-mini';
 const FALLBACK_MODEL = 'gpt-4.1-mini';
 
@@ -156,13 +158,14 @@ function buildRecallContext(
 export async function generateAIResponse(
   request: AIRequest
 ): Promise<AIResponse> {
+  const useProxy = Platform.OS === 'web';
   const apiKey =
     process.env.EXPO_PUBLIC_OPENAI_API_KEY ||
     Constants.expoConfig?.extra?.openaiApiKey ||
     process.env.OPENAI_API_KEY;
 
-  // If no API key, fall back to intelligent template response
-  if (!apiKey) {
+  // On native platforms, an API key is required for direct OpenAI calls
+  if (!useProxy && !apiKey) {
     console.error(
       '[AI Service] No OpenAI API key found. Set EXPO_PUBLIC_OPENAI_API_KEY or OPENAI_API_KEY. Returning offline template.'
     );
@@ -242,21 +245,27 @@ export async function generateAIResponse(
         ]
       : request.message;
 
-    const res = await fetch(OPENAI_CHAT_URL, {
+    const requestBody = {
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
+      ],
+      temperature: request.temperature ?? 0.7,
+      max_tokens: request.max_tokens ?? 1000,
+    };
+
+    // On web, use the server-side proxy to avoid CORS; on native, call OpenAI directly
+    const url = useProxy ? PROXY_PATH : OPENAI_CHAT_URL;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (!useProxy && apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
+    const res = await fetch(url, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent },
-        ],
-        temperature: request.temperature ?? 0.7,
-        max_tokens: request.max_tokens ?? 1000,
-      }),
+      headers,
+      body: JSON.stringify(requestBody),
     });
 
     if (!res.ok) {
