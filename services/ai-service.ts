@@ -32,6 +32,7 @@ import {
 } from './manual-retrieval';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { getModelById, getDefaultModel, getProviderConfig, type AIProvider } from '../types/models';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -39,8 +40,8 @@ import { Platform } from 'react-native';
 
 const OPENAI_CHAT_URL = 'https://api.openai.com/v1/chat/completions';
 const PROXY_PATH = '/api/chat';
-const DEFAULT_MODEL = 'gpt-4.1-mini';
-const FALLBACK_MODEL = 'gpt-4.1-mini';
+const DEFAULT_MODEL_ID = 'gpt-4.1-mini';
+const FALLBACK_MODEL_ID = 'gpt-4.1-mini';
 
 // ---------------------------------------------------------------------------
 // System prompts
@@ -234,8 +235,12 @@ export async function generateAIResponse(
     recallContext;
 
   try {
-    const model = request.attachment?.type === 'image' ? 'gpt-4o' :
-      request.context_type === 'general' ? FALLBACK_MODEL : DEFAULT_MODEL;
+    // Resolve model: user-selected → image-specific → default
+    const selectedModel = request.model_id ? getModelById(request.model_id) : undefined;
+    const imageModel = request.attachment?.type === 'image' ? getModelById('gpt-4o') : undefined;
+    const resolvedModel = selectedModel || imageModel || getDefaultModel();
+    const modelId = resolvedModel.modelId;
+    const provider = resolvedModel.provider;
 
     // Build user message — plain text or multimodal with image
     const userContent: any = request.attachment?.type === 'image'
@@ -245,14 +250,15 @@ export async function generateAIResponse(
         ]
       : request.message;
 
-    const requestBody = {
-      model,
+    const requestBody: Record<string, any> = {
+      model: modelId,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userContent },
       ],
       temperature: request.temperature ?? 0.7,
-      max_tokens: request.max_tokens ?? 1000,
+      max_tokens: request.max_tokens ?? resolvedModel.maxTokens,
+      provider, // tells the proxy which provider API to call
     };
 
     // On web, use the server-side proxy to avoid CORS; on native, call OpenAI directly
@@ -270,8 +276,8 @@ export async function generateAIResponse(
 
     if (!res.ok) {
       const errBody = await res.text();
-      console.error('[AI Service] OpenAI API error:', res.status, errBody);
-      throw new Error(`OpenAI API error ${res.status}: ${errBody.slice(0, 200)}`);
+      console.error(`[AI Service] ${provider} API error:`, res.status, errBody);
+      throw new Error(`AI error ${res.status}: ${errBody.slice(0, 200)}`);
     }
 
     const json = await res.json();
@@ -282,11 +288,11 @@ export async function generateAIResponse(
       content: choice?.message?.content || 'I was unable to generate a response. Please try again.',
       sources: ragSources.length > 0 ? ragSources : undefined,
       tokens_used: json.usage?.total_tokens || 0,
-      model_version: json.model || model,
+      model_version: json.model || modelId,
       created_at: new Date().toISOString(),
     };
   } catch (err) {
-    console.error('[AI Service] OpenAI request failed:', err);
+    console.error('[AI Service] Request failed:', err);
     throw err;
   }
 }
@@ -453,7 +459,7 @@ Return JSON with exactly these keys:
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: DEFAULT_MODEL,
+        model: DEFAULT_MODEL_ID,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -513,7 +519,7 @@ Include 4–6 options covering OEM, OEM-equivalent, and quality aftermarket bran
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: DEFAULT_MODEL,
+        model: DEFAULT_MODEL_ID,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -576,7 +582,7 @@ If no maintenance event is described, return: null`;
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: DEFAULT_MODEL,
+        model: DEFAULT_MODEL_ID,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -682,7 +688,7 @@ Return a JSON object with exactly these keys:
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: DEFAULT_MODEL,
+        model: DEFAULT_MODEL_ID,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },

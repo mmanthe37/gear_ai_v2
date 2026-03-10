@@ -1,58 +1,168 @@
 const https = require('https');
 
+// ---------------------------------------------------------------------------
+// Provider configuration (mirrors types/models.ts but plain JS for serverless)
+// ---------------------------------------------------------------------------
+
+const PROVIDERS = {
+  openai: { hostname: 'api.openai.com', path: '/v1/chat/completions', envKey: 'OPENAI_API_KEY', format: 'openai' },
+  anthropic: { hostname: 'api.anthropic.com', path: '/v1/messages', envKey: 'ANTHROPIC_API_KEY', format: 'anthropic' },
+  google: { hostname: 'generativelanguage.googleapis.com', pathTemplate: '/v1beta/models/{model}:generateContent', envKey: 'GOOGLE_AI_API_KEY', format: 'google' },
+  xai: { hostname: 'api.x.ai', path: '/v1/chat/completions', envKey: 'XAI_API_KEY', format: 'openai' },
+  deepseek: { hostname: 'api.deepseek.com', path: '/chat/completions', envKey: 'DEEPSEEK_API_KEY', format: 'openai' },
+  moonshot: { hostname: 'api.moonshot.cn', path: '/v1/chat/completions', envKey: 'MOONSHOT_API_KEY', format: 'openai' },
+};
+
+// ---------------------------------------------------------------------------
+// Request/response transformers
+// ---------------------------------------------------------------------------
+
+function toAnthropicRequest(body) {
+  const messages = (body.messages || []).filter((m) => m.role !== 'system');
+  const systemMsg = (body.messages || []).find((m) => m.role === 'system');
+  return {
+    model: body.model,
+    max_tokens: body.max_tokens || 1024,
+    temperature: body.temperature,
+    system: systemMsg ? systemMsg.content : undefined,
+    messages: messages.map((m) => ({ role: m.role, content: m.content })),
+  };
+}
+
+function fromAnthropicResponse(data) {
+  const text = (data.content || []).map((b) => b.text || '').join('');
+  return {
+    id: data.id,
+    object: 'chat.completion',
+    model: data.model,
+    choices: [{ index: 0, message: { role: 'assistant', content: text }, finish_reason: data.stop_reason || 'stop' }],
+    usage: {
+      prompt_tokens: data.usage?.input_tokens || 0,
+      completion_tokens: data.usage?.output_tokens || 0,
+      total_tokens: (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0),
+    },
+  };
+}
+
+function toGoogleRequest(body) {
+  const systemMsg = (body.messages || []).find((m) => m.role === 'system');
+  const userMsgs = (body.messages || []).filter((m) => m.role !== 'system');
+  const contents = userMsgs.map((m) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }],
+  }));
+  const req = {
+    contents,
+    generationConfig: {
+      temperature: body.temperature,
+      maxOutputTokens: body.max_tokens || 1024,
+    },
+  };
+  if (systemMsg) {
+    req.systemInstruction = { parts: [{ text: systemMsg.content }] };
+  }
+  return req;
+}
+
+function fromGoogleResponse(data) {
+  const candidate = data.candidates?.[0];
+  const text = candidate?.content?.parts?.map((p) => p.text || '').join('') || '';
+  return {
+    id: 'google-' + Date.now(),
+    object: 'chat.completion',
+    model: 'gemini',
+    choices: [{ index: 0, message: { role: 'assistant', content: text }, finish_reason: candidate?.finishReason || 'stop' }],
+    usage: {
+      prompt_tokens: data.usageMetadata?.promptTokenCount || 0,
+      completion_tokens: data.usageMetadata?.candidatesTokenCount || 0,
+      total_tokens: data.usageMetadata?.totalTokenCount || 0,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// HTTPS helper
+// ---------------------------------------------------------------------------
+
+function httpsPost(options, body) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(options, (response) => {
+      const chunks = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => {
+        const raw = Buffer.concat(chunks).toString();
+        try {
+          resolve({ status: response.statusCode, json: JSON.parse(raw) });
+        } catch {
+          reject(new Error('Failed to parse response: ' + raw.slice(0, 300)));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Handler
+// ---------------------------------------------------------------------------
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const { provider: providerName = 'openai', ...openaiBody } = req.body;
+  const provider = PROVIDERS[providerName];
+  if (!provider) {
+    return res.status(400).json({ error: `Unknown provider: ${providerName}` });
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env[provider.envKey];
   if (!apiKey) {
-    return res.status(500).json({ error: 'OpenAI API key not configured on server' });
+    return res.status(500).json({ error: `API key not configured for provider: ${providerName}` });
   }
 
   try {
-    const body = JSON.stringify(req.body);
-    const data = await new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'api.openai.com',
-        path: '/v1/chat/completions',
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(body),
-        },
-      };
+    let requestBody;
+    let path = provider.path;
+    const headers = { 'Content-Type': 'application/json' };
 
-      const request = https.request(options, (response) => {
-        const chunks = [];
-        response.on('data', (chunk) => chunks.push(chunk));
-        response.on('end', () => {
-          const raw = Buffer.concat(chunks).toString();
-          try {
-            resolve({ status: response.statusCode, json: JSON.parse(raw) });
-          } catch {
-            reject(new Error('Failed to parse OpenAI response: ' + raw.slice(0, 200)));
-          }
-        });
-      });
+    if (provider.format === 'anthropic') {
+      requestBody = JSON.stringify(toAnthropicRequest(openaiBody));
+      headers['x-api-key'] = apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+    } else if (provider.format === 'google') {
+      requestBody = JSON.stringify(toGoogleRequest(openaiBody));
+      path = provider.pathTemplate.replace('{model}', openaiBody.model) + '?key=' + apiKey;
+    } else {
+      // OpenAI-compatible (openai, xai, deepseek, moonshot)
+      requestBody = JSON.stringify(openaiBody);
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
 
-      request.on('error', reject);
-      request.write(body);
-      request.end();
-    });
+    headers['Content-Length'] = Buffer.byteLength(requestBody);
 
-    return res.status(data.status).json(data.json);
+    const data = await httpsPost(
+      { hostname: provider.hostname, path, method: 'POST', headers },
+      requestBody
+    );
+
+    // Normalize non-OpenAI responses to OpenAI format
+    let normalized = data.json;
+    if (provider.format === 'anthropic' && data.status < 300) {
+      normalized = fromAnthropicResponse(data.json);
+    } else if (provider.format === 'google' && data.status < 300) {
+      normalized = fromGoogleResponse(data.json);
+    }
+
+    return res.status(data.status).json(normalized);
   } catch (error) {
-    console.error('[api/chat] Proxy error:', error.message || error);
-    return res.status(502).json({ error: 'Failed to reach OpenAI API', detail: String(error.message || error) });
+    console.error(`[api/chat] ${providerName} proxy error:`, error.message || error);
+    return res.status(502).json({ error: `Failed to reach ${providerName} API`, detail: String(error.message || error) });
   }
 };

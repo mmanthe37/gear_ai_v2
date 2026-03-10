@@ -94,6 +94,8 @@ export interface AIRequest {
   include_rag?: boolean;
   max_tokens?: number;
   temperature?: number;
+  /** Selected AI model ID from the model registry */
+  model_id?: string;
   /** Full vehicle context for enhanced AI responses (F1) */
   vehicle_context?: VehicleFullContext;
   /** Multimodal attachment for photo/audio analysis (F2) */

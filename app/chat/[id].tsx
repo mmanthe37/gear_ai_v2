@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import GearActionIcon from '../../components/branding/GearActionIcon';
 import AppShell from '../../components/layout/AppShell';
+import ModelSelector from '../../components/chat/ModelSelector';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   addChatMessage,
@@ -118,6 +119,8 @@ export default function ChatScreen() {
   const [showVinInput, setShowVinInput] = useState(false);
   const [prepurchaseVin, setPrepurchaseVin] = useState('');
   const [isAnalyzingVin, setIsAnalyzingVin] = useState(false);
+  /** Multi-model: selected AI model */
+  const [selectedModelId, setSelectedModelId] = useState('gpt-4.1-mini');
 
   const routeId = String(params.id || '');
   const routeMake = params.make || '';
@@ -409,6 +412,7 @@ export default function ChatScreen() {
           message: text,
           include_rag: true,
           context_type: 'manual',
+          model_id: selectedModelId,
           // F1: Pass full vehicle context if available
           vehicle_context: vehicleFullContextRef.current || undefined,
           // Legacy fallback
@@ -667,7 +671,7 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.chatCard}>
-          {/* Toolbar: History + New Chat */}
+          {/* Toolbar: History + New Chat + Model Selector */}
           <View style={styles.chatToolbar}>
             <Pressable
               accessibilityRole="button"
@@ -680,6 +684,15 @@ export default function ChatScreen() {
               <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
               <Text style={styles.toolbarBtnLabel}>History</Text>
             </Pressable>
+
+            {user?.user_id && (
+              <ModelSelector
+                userId={user.user_id}
+                selectedModelId={selectedModelId}
+                onSelectModel={setSelectedModelId}
+              />
+            )}
+
             <Pressable
               accessibilityRole="button"
               style={({ pressed }) => [styles.toolbarBtn, styles.toolbarBtnAccent, pressed && styles.buttonInteraction]}
