@@ -23,7 +23,7 @@ export const STORAGE_BUCKETS = {
 export async function uploadFile(
   bucket: string,
   path: string,
-  file: File | Blob,
+  file: File | Blob | ArrayBuffer | Uint8Array,
   options?: {
     cacheControl?: string;
     contentType?: string;

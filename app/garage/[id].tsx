@@ -4,6 +4,7 @@ import {
   Alert,
   Image,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import GearActionIcon from '../../components/branding/GearActionIcon';
@@ -290,16 +292,32 @@ export default function VehicleDetailScreen() {
     setUploadingPhoto(true);
     try {
       const asset = result.assets[0];
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
-      const ext = asset.uri.split('.').pop() || 'jpg';
+
+      let fileBody: Blob | Uint8Array;
+      if (Platform.OS === 'web') {
+        const response = await fetch(asset.uri);
+        fileBody = await response.blob();
+      } else {
+        // On native, read as base64 then decode to Uint8Array (reliable for Supabase upload)
+        const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        const binaryStr = atob(base64);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        fileBody = bytes;
+      }
+
+      const ext = asset.uri.split('.').pop()?.split('?')[0] || 'jpg';
       const path = `${user.user_id}/${vehicle.vehicle_id}.${ext}`;
-      const { url } = await uploadFile(STORAGE_BUCKETS.VEHICLE_PHOTOS, path, blob, {
+      const { url } = await uploadFile(STORAGE_BUCKETS.VEHICLE_PHOTOS, path, fileBody, {
         contentType: asset.mimeType || 'image/jpeg',
         upsert: true,
       });
       await updateVehicleImage(vehicle.vehicle_id, user.user_id, url);
-      loadData();
+      setVehicle(prev => prev ? { ...prev, profile_image: url } : null);
     } catch (e: any) {
       Alert.alert('Upload failed', e?.message || 'Please try again.');
     } finally {
@@ -388,6 +406,26 @@ export default function VehicleDetailScreen() {
                   >
                     <GearActionIcon size="md" />
                     <Text style={styles.primaryButtonText}>AI Chat</Text>
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/manuals',
+                        params: {
+                          vehicleId: vehicle.vehicle_id,
+                          vin: vehicle.vin || '',
+                          year: vehicle.year.toString(),
+                          make: vehicle.make,
+                          model: vehicle.model,
+                        },
+                      })
+                    }
+                  >
+                    <Ionicons name="document-text-outline" size={16} color={colors.textPrimary} />
+                    <Text style={styles.secondaryButtonText}>Retrieve Manual</Text>
                   </Pressable>
 
                   <Pressable
