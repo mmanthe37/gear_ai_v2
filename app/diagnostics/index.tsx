@@ -11,6 +11,7 @@ import {
 import AppShell from '../../components/layout/AppShell';
 import GearActionIcon from '../../components/branding/GearActionIcon';
 import GearLogo from '../../components/branding/GearLogo';
+import ModernDiagnosticCard from '../../components/ModernDiagnosticCard';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   analyzeDTC,
@@ -442,6 +443,7 @@ export default function DiagnosticsScreen() {
                 codes={filteredCodes}
                 filter={codeFilter}
                 loading={codesLoading}
+                vehicleName={selectedVehicle ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}` : ''}
                 onFilterChange={setCodeFilter}
                 onAnalyze={handleAnalyzeCode}
                 onResolve={handleResolveCode}
@@ -623,6 +625,7 @@ interface CodesTabProps {
   filter: 'all' | 'active' | 'resolved';
   loading: boolean;
   obdConnected: boolean;
+  vehicleName: string;
   onFilterChange: (f: 'all' | 'active' | 'resolved') => void;
   onAnalyze: (code: DiagnosticCode) => Promise<DTCAnalysis | null>;
   onResolve: (id: string) => Promise<void>;
@@ -630,11 +633,26 @@ interface CodesTabProps {
   onClearCodes: () => Promise<void>;
 }
 
-function CodesTab({ codes, filter, loading, obdConnected, onFilterChange, onAnalyze, onResolve, onReadCodes, onClearCodes }: CodesTabProps) {
+/** Normalize DiagnosticCode severity to the values ModernDiagnosticCard accepts. */
+function normalizeSeverity(severity: DiagnosticCode['severity']): 'low' | 'medium' | 'high' {
+  return severity === 'critical' ? 'high' : severity;
+}
+
+function formatDateDetected(iso?: string | null): string {
+  if (!iso) return 'Unknown';
+  try {
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return iso;
+  }
+}
+
+function CodesTab({ codes, filter, loading, obdConnected, vehicleName, onFilterChange, onAnalyze, onResolve, onReadCodes, onClearCodes }: CodesTabProps) {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const [reading, setReading] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
     <View style={styles.sectionGap}>
@@ -683,12 +701,23 @@ function CodesTab({ codes, filter, loading, obdConnected, onFilterChange, onAnal
         </View>
       ) : (
         codes.map((code) => (
-          <DTCCodeCard
-            key={code.diagnostic_id}
-            code={code}
-            onAnalyze={onAnalyze}
-            onResolve={onResolve}
-          />
+          <View key={code.diagnostic_id}>
+            <ModernDiagnosticCard
+              code={code.code}
+              description={code.description}
+              severity={normalizeSeverity(code.severity)}
+              vehicle={vehicleName}
+              dateDetected={formatDateDetected(code.detected_at)}
+              onPress={() => setExpandedId(expandedId === code.diagnostic_id ? null : code.diagnostic_id)}
+            />
+            {expandedId === code.diagnostic_id && (
+              <DTCCodeCard
+                code={code}
+                onAnalyze={onAnalyze}
+                onResolve={onResolve}
+              />
+            )}
+          </View>
         ))
       )}
     </View>

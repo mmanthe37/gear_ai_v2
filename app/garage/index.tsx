@@ -7,28 +7,17 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import GearActionIcon from '../../components/branding/GearActionIcon';
 import GearLogo from '../../components/branding/GearLogo';
+import ModernVehicleCard from '../../components/ModernVehicleCard';
 import AppShell from '../../components/layout/AppShell';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserVehicles } from '../../services/vehicle-service';
-import type { Vehicle, VehicleStatus } from '../../types/vehicle';
+import type { Vehicle } from '../../types/vehicle';
 import { radii } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
-
-const STATUS_COLORS: Record<VehicleStatus, string> = {
-  active:   '#22C55E',
-  stored:   '#4AA3FF',
-  for_sale: '#F59E0B',
-  sold:     '#A6B4C3',
-  totaled:  '#EF4444',
-};
-const STATUS_LABELS: Record<VehicleStatus, string> = {
-  active: 'Active', stored: 'Stored', for_sale: 'For Sale', sold: 'Sold', totaled: 'Totaled',
-};
 
 function StatTile({ label, value }: { label: string; value: string }) {
   const { colors } = useTheme();
@@ -177,75 +166,21 @@ export default function GarageScreen() {
       fontSize: typeScale.sm,
       textAlign: 'center',
     },
-    vehicleCard: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radii.md,
-      backgroundColor: colors.surfaceAlt,
-      minHeight: 64,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      gap: 10,
-    },
-    vehicleInfoWrap: {
-      flex: 1,
-      minWidth: 0,
-    },
-    vehicleName: {
-      color: colors.textPrimary,
-      fontFamily: fontFamilies.body,
-      fontSize: typeScale.md,
-    },
-    vehicleSubName: {
-      color: colors.textSecondary,
-      fontFamily: fontFamilies.body,
-      fontSize: typeScale.xs,
-      marginTop: 1,
-    },
-    vehicleMetaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginTop: 3,
-      flexWrap: 'wrap',
-    },
-    vehicleMeta: {
-      color: colors.textSecondary,
-      fontFamily: fontFamilies.body,
-      fontSize: typeScale.xs,
-    },
-    statusPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      borderWidth: 1,
-      borderRadius: radii.full,
-      paddingHorizontal: 7,
-      paddingVertical: 2,
-    },
-    statusDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-    },
-    statusPillText: {
-      fontFamily: fontFamilies.body,
-      fontSize: 11,
-    },
-    secondaryButton: {
+    chatButton: {
       minHeight: 36,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radii.full,
       backgroundColor: colors.surface,
-      paddingHorizontal: 10,
+      paddingHorizontal: 14,
       justifyContent: 'center',
       alignItems: 'center',
       flexDirection: 'row',
       gap: 6,
+      alignSelf: 'flex-end',
+      marginTop: -8,
+      marginBottom: 8,
+      marginRight: 4,
     },
     secondaryButtonText: {
       color: colors.textPrimary,
@@ -298,43 +233,15 @@ export default function GarageScreen() {
             </View>
           ) : (
             vehicles.map((vehicle) => (
-              <Pressable
-                key={vehicle.vehicle_id}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.vehicleCard,
-                  pressed && styles.buttonInteraction,
-                ]}
-                onPress={() => router.push(`/garage/${vehicle.vehicle_id}`)}
-              >
-                <View style={styles.vehicleInfoWrap}>
-                  <Text style={styles.vehicleName}>
-                    {vehicle.nickname
-                      ? `${vehicle.nickname}`
-                      : `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                  </Text>
-                  {vehicle.nickname && (
-                    <Text style={styles.vehicleSubName}>
-                      {vehicle.year} {vehicle.make} {vehicle.model}
-                    </Text>
-                  )}
-                  <View style={styles.vehicleMetaRow}>
-                    <Text style={styles.vehicleMeta}>
-                      {vehicle.current_mileage
-                        ? `${vehicle.current_mileage.toLocaleString()} mi`
-                        : 'Mileage not set'}
-                    </Text>
-                    {vehicle.status && vehicle.status !== 'active' && (
-                      <View style={[styles.statusPill, { borderColor: STATUS_COLORS[vehicle.status as VehicleStatus] }]}>
-                        <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[vehicle.status as VehicleStatus] }]} />
-                        <Text style={[styles.statusPillText, { color: STATUS_COLORS[vehicle.status as VehicleStatus] }]}>
-                          {STATUS_LABELS[vehicle.status as VehicleStatus]}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-
+              <View key={vehicle.vehicle_id}>
+                <ModernVehicleCard
+                  make={vehicle.make}
+                  model={vehicle.model}
+                  year={vehicle.year}
+                  vin={vehicle.vin}
+                  mileage={vehicle.current_mileage}
+                  onPress={() => router.push(`/garage/${vehicle.vehicle_id}`)}
+                />
                 <Pressable
                   accessibilityRole="button"
                   onPress={() =>
@@ -349,14 +256,14 @@ export default function GarageScreen() {
                     })
                   }
                   style={({ pressed }) => [
-                    styles.secondaryButton,
+                    styles.chatButton,
                     pressed && styles.buttonInteraction,
                   ]}
                 >
                   <GearActionIcon size="sm" />
-                  <Text style={styles.secondaryButtonText}>Chat</Text>
+                  <Text style={styles.secondaryButtonText}>Chat with AI</Text>
                 </Pressable>
-              </Pressable>
+              </View>
             ))
           )}
         </View>
