@@ -638,7 +638,7 @@ function normalizeSeverity(severity: DiagnosticCode['severity']): 'low' | 'mediu
   return severity === 'critical' ? 'high' : severity;
 }
 
-function formatDateShort(iso?: string): string {
+function formatDateDetected(iso?: string | null): string {
   if (!iso) return 'Unknown';
   try {
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -707,7 +707,7 @@ function CodesTab({ codes, filter, loading, obdConnected, vehicleName, onFilterC
               description={code.description}
               severity={normalizeSeverity(code.severity)}
               vehicle={vehicleName}
-              dateDetected={formatDateShort(code.detected_at ?? undefined)}
+              dateDetected={formatDateDetected(code.detected_at)}
               onPress={() => setExpandedId(expandedId === code.diagnostic_id ? null : code.diagnostic_id)}
             />
             {expandedId === code.diagnostic_id && (
