@@ -12,6 +12,7 @@ import GearActionIcon from '../branding/GearActionIcon';
 import { radii } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import { sp, pressedOpacity, touchMinHeight } from '../../theme/spacing';
 import type { SymptomCheck } from '../../types/diagnostic';
 
 interface Props {
@@ -29,7 +30,7 @@ export default function SymptomCheckerPanel({ onSubmit, history = [] }: Props) {
   const urgencyColor: Record<string, string> = {
     low: colors.success,
     medium: colors.warning,
-    high: '#F97316',
+    high: colors.warning,
     critical: colors.danger,
   };
 
@@ -53,7 +54,7 @@ export default function SymptomCheckerPanel({ onSubmit, history = [] }: Props) {
   }
 
   const styles = StyleSheet.create({
-    container: { gap: 12 },
+    container: { gap: sp[3] },
     heading: {
       color: colors.textPrimary,
       fontFamily: fontFamilies.heading,
@@ -65,13 +66,13 @@ export default function SymptomCheckerPanel({ onSubmit, history = [] }: Props) {
       fontSize: typeScale.sm,
     },
     chipRow: { marginHorizontal: -4 },
-    chipContent: { gap: 8, paddingHorizontal: 4 },
+    chipContent: { gap: sp[2], paddingHorizontal: sp[1] },
     chip: {
       backgroundColor: colors.surfaceAlt,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radii.full,
-      paddingHorizontal: 12,
+      paddingHorizontal: sp[3],
       paddingVertical: 6,
     },
     chipText: {
@@ -84,8 +85,7 @@ export default function SymptomCheckerPanel({ onSubmit, history = [] }: Props) {
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radii.md,
-      padding: 12,
-      color: colors.textPrimary,
+      padding: sp[3],
       fontFamily: fontFamilies.body,
       fontSize: typeScale.sm,
       minHeight: 80,
@@ -93,12 +93,12 @@ export default function SymptomCheckerPanel({ onSubmit, history = [] }: Props) {
     submitBtn: {
       backgroundColor: colors.brandAccent,
       borderRadius: radii.md,
-      minHeight: 44,
+      minHeight: touchMinHeight,
       alignItems: 'center',
       justifyContent: 'center',
     },
     submitDisabled: { opacity: 0.5 },
-    submitContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    submitContent: { flexDirection: 'row', alignItems: 'center', gap: sp[2] },
     submitText: {
       color: '#000',
       fontFamily: fontFamilies.heading,
@@ -110,7 +110,7 @@ export default function SymptomCheckerPanel({ onSubmit, history = [] }: Props) {
       borderColor: colors.border,
       borderRadius: radii.lg,
       padding: 14,
-      gap: 12,
+      gap: sp[3],
     },
     resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     resultTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
@@ -120,7 +120,7 @@ export default function SymptomCheckerPanel({ onSubmit, history = [] }: Props) {
     section: { gap: 6 },
     sectionLabel: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 1 },
     codeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-    codePill: { backgroundColor: colors.accentTint, borderWidth: 1, borderColor: colors.brandAccent, borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 4 },
+    codePill: { backgroundColor: colors.accentTint, borderWidth: 1, borderColor: colors.brandAccent, borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: sp[1] },
     codePillText: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.xs },
     bulletItem: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, lineHeight: 20 },
     flowStep: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, padding: 10, gap: 6 },
@@ -128,7 +128,7 @@ export default function SymptomCheckerPanel({ onSubmit, history = [] }: Props) {
     stepNum: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.brandAccent, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
     stepNumText: { color: '#000', fontFamily: fontFamilies.heading, fontSize: 11 },
     flowInstruction: { flex: 1, color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, lineHeight: 18 },
-    flowDetail: { paddingLeft: 32, gap: 4 },
+    flowDetail: { paddingLeft: sp[8], gap: sp[1] },
     flowCheck: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
     flowYes: { color: colors.success, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
     flowNo: { color: colors.warning, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
@@ -146,7 +146,7 @@ export default function SymptomCheckerPanel({ onSubmit, history = [] }: Props) {
         {examplePrompts.map((p) => (
           <Pressable
             key={p}
-            style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.chip, pressed && { opacity: pressedOpacity }]}
             onPress={() => setText(p)}
           >
             <Text style={styles.chipText}>{p}</Text>
@@ -167,9 +167,10 @@ export default function SymptomCheckerPanel({ onSubmit, history = [] }: Props) {
       />
 
       <Pressable
-        style={({ pressed }) => [styles.submitBtn, loading && styles.submitDisabled, pressed && { opacity: 0.85 }]}
+        style={({ pressed }) => [styles.submitBtn, loading && styles.submitDisabled, pressed && { opacity: pressedOpacity }]}
         onPress={handleSubmit}
         disabled={loading || !text.trim()}
+        accessibilityLabel="Analyze Symptom"
       >
         {loading ? (
           <ActivityIndicator color="#000" />
@@ -224,6 +225,7 @@ export default function SymptomCheckerPanel({ onSubmit, history = [] }: Props) {
                   key={step.step}
                   style={styles.flowStep}
                   onPress={() => setExpandedStep(expandedStep === step.step ? null : step.step)}
+                  accessibilityLabel={`Step ${step.step}: ${step.instruction}`}
                 >
                   <View style={styles.flowStepHeader}>
                     <View style={styles.stepNum}>

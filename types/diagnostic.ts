@@ -114,6 +114,7 @@ export interface DTCAnalysis {
   probable_causes_ranked?: Array<{ cause: string; likelihood: 'high' | 'medium' | 'low'; explanation: string }>;
   diy_vs_shop?: 'diy' | 'shop' | 'either';
   diy_vs_shop_reasoning?: string;
+  safety_escalation?: string;
 }
 
 // ============================================================================

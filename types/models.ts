@@ -90,6 +90,16 @@ export const AVAILABLE_MODELS: ModelDefinition[] = [
     description: 'Fast and affordable OpenAI model',
   },
   {
+    id: 'gpt-4o',
+    name: 'GPT-4o',
+    provider: 'openai',
+    modelId: 'gpt-4o',
+    tier: 'free',
+    supportsImages: true,
+    maxTokens: 4096,
+    description: 'OpenAI multimodal model with image support',
+  },
+  {
     id: 'gpt-4.1',
     name: 'GPT-4.1',
     provider: 'openai',
@@ -111,6 +121,16 @@ export const AVAILABLE_MODELS: ModelDefinition[] = [
   },
 
   // ---- Anthropic / Claude ----
+  {
+    id: 'claude-3-5-haiku-20241022',
+    name: 'Claude 3.5 Haiku',
+    provider: 'anthropic',
+    modelId: 'claude-3-5-haiku-20241022',
+    tier: 'free',
+    supportsImages: false,
+    maxTokens: 4096,
+    description: 'Fast and affordable Anthropic model',
+  },
   {
     id: 'claude-sonnet-4',
     name: 'Claude Sonnet 4',
@@ -134,6 +154,26 @@ export const AVAILABLE_MODELS: ModelDefinition[] = [
 
   // ---- Google / Gemini ----
   {
+    id: 'gemini-3.1-flash-lite',
+    name: 'Gemini 3.1 Flash Lite',
+    provider: 'google',
+    modelId: 'gemini-3.1-flash-lite-preview',
+    tier: 'free',
+    supportsImages: false,
+    maxTokens: 4096,
+    description: 'Fastest & cheapest Gemini — great for quick questions',
+  },
+  {
+    id: 'gemini-3-flash',
+    name: 'Gemini 3 Flash',
+    provider: 'google',
+    modelId: 'gemini-3-flash-preview',
+    tier: 'free',
+    supportsImages: true,
+    maxTokens: 4096,
+    description: 'Fast multimodal Gemini with image support',
+  },
+  {
     id: 'gemini-2.5-flash',
     name: 'Gemini 2.5 Flash',
     provider: 'google',
@@ -141,7 +181,7 @@ export const AVAILABLE_MODELS: ModelDefinition[] = [
     tier: 'free',
     supportsImages: true,
     maxTokens: 4096,
-    description: 'Google\'s fast multimodal model',
+    description: 'Stable multimodal Gemini model',
   },
   {
     id: 'gemini-2.5-pro',
@@ -151,7 +191,17 @@ export const AVAILABLE_MODELS: ModelDefinition[] = [
     tier: 'paid',
     supportsImages: true,
     maxTokens: 8192,
-    description: 'Google\'s most capable model',
+    description: 'Advanced Gemini for complex reasoning',
+  },
+  {
+    id: 'gemini-3.1-pro',
+    name: 'Gemini 3.1 Pro',
+    provider: 'google',
+    modelId: 'gemini-3.1-pro-preview',
+    tier: 'paid',
+    supportsImages: true,
+    maxTokens: 8192,
+    description: 'Google\'s most capable model — 1M context window',
   },
 
   // ---- xAI / Grok ----

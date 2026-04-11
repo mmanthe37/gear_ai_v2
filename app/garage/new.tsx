@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,11 +10,12 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
-import GearActionIcon from '../../components/branding/GearActionIcon';
 import AppShell from '../../components/layout/AppShell';
+import { Button, ErrorBanner } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { decodeVIN } from '../../services/vin-decoder';
 import { canAddVehicle, createVehicle } from '../../services/vehicle-service';
+import { sp, touchMinHeight } from '../../theme/spacing';
 import { radii } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
@@ -67,7 +67,6 @@ export default function NewVehicleScreen() {
   };
 
   const handleSave = async () => {
-    console.log('[Garage] handleSave called');
     setErrorMessage('');
 
     if (!user?.user_id) {
@@ -99,15 +98,12 @@ export default function NewVehicleScreen() {
 
     setSaving(true);
     try {
-      console.log('[Garage] Checking vehicle eligibility for user', user.user_id);
       const { canAdd, tier } = await canAddVehicle(user.user_id);
-      console.log('[Garage] canAddVehicle result:', { canAdd, tier });
       if (!canAdd) {
         throw new Error(`Vehicle limit reached for ${tier} tier. Upgrade your plan to add more vehicles.`);
       }
 
       const vinToSave = vin.length === 17 ? vin : undefined;
-      console.log('[Garage] Creating vehicle — VIN:', vinToSave ?? '(none)', 'Make:', make, 'Model:', model, 'Year:', parsedYear);
 
       await createVehicle(user.user_id, {
         vin: vinToSave,
@@ -120,7 +116,6 @@ export default function NewVehicleScreen() {
         license_plate: licensePlate.trim() || undefined,
       });
 
-      console.log('[Garage] Vehicle created successfully — navigating to /garage');
       router.replace('/garage');
     } catch (error: any) {
       console.error('[Garage] Save vehicle failed:', error);
@@ -135,15 +130,15 @@ export default function NewVehicleScreen() {
       flex: 1,
     },
     content: {
-      padding: 16,
+      padding: sp[4],
     },
     formCard: {
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
       borderRadius: radii.lg,
-      padding: 16,
-      gap: 12,
+      padding: sp[4],
+      gap: sp[3],
       maxWidth: 760,
       width: '100%',
       alignSelf: 'center',
@@ -157,10 +152,10 @@ export default function NewVehicleScreen() {
       color: colors.textSecondary,
       fontSize: typeScale.sm,
       fontFamily: fontFamilies.body,
-      marginBottom: 4,
+      marginBottom: sp[1],
     },
     inputGroup: {
-      gap: 6,
+      gap: sp[2],
     },
     label: {
       color: colors.textSecondary,
@@ -168,28 +163,28 @@ export default function NewVehicleScreen() {
       fontFamily: fontFamilies.body,
     },
     input: {
-      minHeight: 44,
+      minHeight: touchMinHeight,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radii.md,
       backgroundColor: colors.surfaceAlt,
       color: colors.textPrimary,
-      paddingHorizontal: 12,
+      paddingHorizontal: sp[3],
       fontFamily: fontFamilies.body,
       fontSize: typeScale.md,
     },
     inlineInput: {
-      minHeight: 44,
+      minHeight: touchMinHeight,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
+      gap: sp[3],
     },
     inlineInputField: {
       flex: 1,
     },
     inlineRow: {
       flexDirection: 'row',
-      gap: 10,
+      gap: sp[3],
       flexWrap: 'wrap',
     },
     inlineColumn: {
@@ -197,60 +192,11 @@ export default function NewVehicleScreen() {
       flex: 1,
     },
     actions: {
-      marginTop: 10,
+      marginTop: sp[3],
       flexDirection: 'row',
       justifyContent: 'flex-end',
-      gap: 10,
+      gap: sp[3],
       flexWrap: 'wrap',
-    },
-    secondaryButton: {
-      minHeight: 44,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radii.md,
-      backgroundColor: colors.surfaceAlt,
-      paddingHorizontal: 16,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    secondaryButtonText: {
-      color: colors.textPrimary,
-      fontSize: typeScale.sm,
-      fontFamily: fontFamilies.body,
-    },
-    primaryButton: {
-      minHeight: 44,
-      borderRadius: radii.md,
-      backgroundColor: colors.brandAccent,
-      paddingHorizontal: 16,
-      justifyContent: 'center',
-      alignItems: 'center',
-      flexDirection: 'row',
-      gap: 8,
-    },
-    primaryButtonText: {
-      color: colors.background,
-      fontSize: typeScale.sm,
-      fontFamily: fontFamilies.heading,
-    },
-    errorBanner: {
-      borderWidth: 1,
-      borderColor: colors.danger,
-      backgroundColor: 'rgba(220, 38, 38, 0.12)',
-      borderRadius: radii.md,
-      padding: 10,
-      marginBottom: 6,
-    },
-    errorText: {
-      color: colors.danger,
-      fontFamily: fontFamilies.body,
-      fontSize: typeScale.sm,
-    },
-    buttonDisabled: {
-      opacity: 0.6,
-    },
-    buttonInteraction: {
-      opacity: 0.92,
     },
   });
 
@@ -262,9 +208,10 @@ export default function NewVehicleScreen() {
           <Text style={styles.subtitle}>Use a VIN to auto-fill fields, or enter details manually.</Text>
 
           {!!errorMessage && (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            </View>
+            <ErrorBanner
+              message={errorMessage}
+              onDismiss={() => setErrorMessage('')}
+            />
           )}
 
           <View style={styles.inputGroup}>
@@ -278,6 +225,7 @@ export default function NewVehicleScreen() {
                 maxLength={17}
                 placeholder="17-character VIN"
                 placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="Vehicle Identification Number"
               />
               {decoding && <ActivityIndicator size="small" color={colors.brandAccent} />}
             </View>
@@ -291,6 +239,7 @@ export default function NewVehicleScreen() {
               style={styles.input}
               placeholder="Toyota"
               placeholderTextColor={colors.textSecondary}
+              accessibilityLabel="Vehicle make"
             />
           </View>
 
@@ -302,6 +251,7 @@ export default function NewVehicleScreen() {
               style={styles.input}
               placeholder="Camry"
               placeholderTextColor={colors.textSecondary}
+              accessibilityLabel="Vehicle model"
             />
           </View>
 
@@ -315,6 +265,7 @@ export default function NewVehicleScreen() {
                 style={styles.input}
                 placeholder="2024"
                 placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="Model year"
               />
             </View>
             <View style={[styles.inputGroup, styles.inlineColumn]}>
@@ -326,6 +277,7 @@ export default function NewVehicleScreen() {
                 style={styles.input}
                 placeholder="12500"
                 placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="Current mileage"
               />
             </View>
           </View>
@@ -338,6 +290,7 @@ export default function NewVehicleScreen() {
               style={styles.input}
               placeholder='e.g. "Daily Driver", "Weekend Warrior"'
               placeholderTextColor={colors.textSecondary}
+              accessibilityLabel="Vehicle nickname"
             />
           </View>
 
@@ -350,6 +303,7 @@ export default function NewVehicleScreen() {
                 style={styles.input}
                 placeholder="e.g. Pearl White"
                 placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="Vehicle color"
               />
             </View>
             <View style={[styles.inputGroup, styles.inlineColumn]}>
@@ -361,47 +315,34 @@ export default function NewVehicleScreen() {
                 autoCapitalize="characters"
                 placeholder="e.g. ABC-1234"
                 placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="License plate number"
               />
             </View>
           </View>
 
           {!!errorMessage && (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            </View>
+            <ErrorBanner
+              message={errorMessage}
+              onDismiss={() => setErrorMessage('')}
+            />
           )}
 
           <View style={styles.actions}>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.secondaryButton,
-                pressed && styles.buttonInteraction,
-              ]}
+            <Button
+              variant="secondary"
+              title="Cancel"
               onPress={() => router.back()}
-            >
-              <Text style={styles.secondaryButtonText}>Cancel</Text>
-            </Pressable>
+              accessibilityHint="Go back without saving"
+            />
 
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.primaryButton,
-                pressed && styles.buttonInteraction,
-                saving && styles.buttonDisabled,
-              ]}
-              disabled={saving}
+            <Button
+              variant="primary"
+              title="Save Vehicle"
               onPress={handleSave}
-            >
-              {saving ? (
-                <ActivityIndicator color={colors.background} />
-              ) : (
-                <>
-                  <GearActionIcon size="sm" />
-                  <Text style={styles.primaryButtonText}>Save Vehicle</Text>
-                </>
-              )}
-            </Pressable>
+              loading={saving}
+              disabled={saving}
+              accessibilityHint="Save the vehicle to your garage"
+            />
           </View>
         </View>
       </ScrollView>

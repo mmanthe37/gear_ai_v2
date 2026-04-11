@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,9 +12,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { router, useLocalSearchParams } from 'expo-router';
+import CalendarPicker from '../../components/CalendarPicker';
 import AppShell from '../../components/layout/AppShell';
-import GearActionIcon from '../../components/branding/GearActionIcon';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   getMaintenanceRecordById,
@@ -22,8 +25,10 @@ import {
 import { getUserVehicles } from '../../services/vehicle-service';
 import type { MaintenanceRecord, MaintenanceType } from '../../types/maintenance';
 import type { Vehicle } from '../../types/vehicle';
-import { radii } from '../../theme/tokens';
-import { fontFamilies, typeScale } from '../../theme/typography';
+import { elevation, radii } from '../../theme/tokens';
+import { fontFamilies, typeScale, fontWeights, letterSpacings } from '../../theme/typography';
+import { sp, touchMinHeight, pressedOpacity } from '../../theme/spacing';
+import { Button, Badge, ErrorBanner, OverlayBackdrop } from '../../components/ui';
 import { useTheme } from '../../contexts/ThemeContext';
 
 function formatDate(iso: string): string {
@@ -36,27 +41,18 @@ function formatCurrency(n: number): string {
   return `$${n.toFixed(2)}`;
 }
 
-const SEVERITY_OVERDUE = '#EF4444';
-const SEVERITY_DUE_SOON = '#F59E0B';
-const SEVERITY_UPCOMING = '#10B981';
-
-function getNextServiceColor(nextDate?: string, borderColor: string = '#334155'): string {
-  if (!nextDate) return borderColor;
+function getNextServiceColor(
+  colors: ReturnType<typeof useTheme>['colors'],
+  nextDate?: string,
+): string {
+  if (!nextDate) return colors.border;
   const now = new Date();
   const next = new Date(nextDate);
   const daysUntil = (next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-  if (daysUntil < 0) return SEVERITY_OVERDUE;
-  if (daysUntil <= 30) return SEVERITY_DUE_SOON;
-  return SEVERITY_UPCOMING;
+  if (daysUntil < 0) return colors.danger;
+  if (daysUntil <= 30) return colors.warning;
+  return colors.success;
 }
-
-const TYPE_COLORS: Record<string, string> = {
-  routine: '#10B981',
-  repair: '#F59E0B',
-  inspection: '#4AA3FF',
-  diagnostic: '#A855F7',
-  modification: '#33D6D2',
-};
 
 const TYPES: { value: MaintenanceType; label: string }[] = [
   { value: 'routine', label: 'Routine' },
@@ -66,10 +62,26 @@ const TYPES: { value: MaintenanceType; label: string }[] = [
   { value: 'modification', label: 'Modification' },
 ];
 
+const TYPE_BADGE_VARIANT: Record<string, 'success' | 'warning' | 'info' | 'neutral' | 'danger'> = {
+  routine: 'success',
+  repair: 'warning',
+  inspection: 'info',
+  diagnostic: 'neutral',
+  modification: 'neutral',
+};
+
 export default function MaintenanceDetailScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
+
+  const typeColorMap: Record<string, string> = {
+    routine: colors.success,
+    repair: colors.warning,
+    inspection: colors.actionAccent,
+    diagnostic: '#A855F7', // no direct theme token
+    modification: colors.brandAccent,
+  };
 
   const [record, setRecord] = useState<MaintenanceRecord | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -89,6 +101,7 @@ export default function MaintenanceDetailScreen() {
   const [editNextDate, setEditNextDate] = useState('');
   const [editNextMileage, setEditNextMileage] = useState('');
   const [editShopName, setEditShopName] = useState('');
+  const [activeDatePicker, setActiveDatePicker] = useState<'editDate' | 'editNextDate' | null>(null);
 
   const loadRecord = useCallback(async () => {
     if (!user?.user_id || !id) return;
@@ -176,60 +189,16 @@ export default function MaintenanceDetailScreen() {
     );
   };
 
-  const styles = StyleSheet.create({
-    scroll: { flex: 1 },
-    content: { padding: 16, paddingBottom: 40 },
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, gap: 16 },
-    notFoundText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.md, textAlign: 'center' },
-    card: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, backgroundColor: colors.surface, padding: 16, gap: 16, maxWidth: 840, width: '100%', alignSelf: 'center' },
-    recordHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderLeftWidth: 4, paddingLeft: 12 },
-    recordTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.xl },
-    badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-    typeBadge: { borderWidth: 1, borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 3 },
-    typeBadgeText: { fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'capitalize' },
-    headerActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-    editButton: { minHeight: 36, borderWidth: 1, borderColor: colors.brandAccent, borderRadius: radii.md, paddingHorizontal: 14, justifyContent: 'center' },
-    editButtonText: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-    cancelEditButton: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, paddingHorizontal: 14, justifyContent: 'center' },
-    cancelEditText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-    saveEditButton: { minHeight: 36, backgroundColor: colors.brandAccent, borderRadius: radii.md, paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center' },
-    saveEditText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-    metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-    metaItem: { minWidth: 120, flex: 1, gap: 4 },
-    metaLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
-    metaValue: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-    section: { gap: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 14 },
-    sectionTitle: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 1 },
-    costGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-    costItem: { minWidth: 100, flex: 1, gap: 4 },
-    totalValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
-    descText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, lineHeight: 22 },
-    listItem: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
-    listItemBullet: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-    listItemText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, flex: 1 },
-    photoGallery: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-    galleryPhoto: { width: 100, height: 100, borderRadius: radii.md },
-    warrantyBanner: { backgroundColor: 'rgba(16,185,129,0.15)', borderWidth: 1, borderColor: '#10B981', borderRadius: radii.md, padding: 10, alignItems: 'center' },
-    warrantyText: { color: '#10B981', fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-    dangerZone: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 16, alignItems: 'flex-start' },
-    deleteButton: { minHeight: 44, backgroundColor: '#EF4444', borderRadius: radii.md, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
-    deleteButtonText: { color: '#fff', fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-    group: { gap: 6 },
-    row: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    chip: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, backgroundColor: colors.surfaceAlt, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center' },
-    chipActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51, 214, 210, 0.14)' },
-    chipText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-    chipTextActive: { color: colors.textPrimary },
-    input: { minHeight: 44, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, color: colors.textPrimary, paddingHorizontal: 12, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-    notesInput: { minHeight: 80, textAlignVertical: 'top', paddingTop: 10 },
-    dtcBadge: { borderWidth: 1, borderColor: colors.warning, borderRadius: radii.sm, paddingHorizontal: 8, paddingVertical: 3 },
-    dtcBadgeText: { color: colors.warning, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-    primaryButton: { minHeight: 44, borderRadius: radii.md, backgroundColor: colors.brandAccent, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
-    primaryButtonText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-    buttonContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    buttonInteraction: { opacity: 0.88 },
-  });
+  const handleDateChange = (_: DateTimePickerEvent, selected?: Date) => {
+    if (Platform.OS === 'android') setActiveDatePicker(null);
+    if (selected) {
+      const iso = selected.toISOString().split('T')[0];
+      if (activeDatePicker === 'editDate') setEditDate(iso);
+      else setEditNextDate(iso);
+    }
+  };
+
+  const styles = makeStyles(colors);
 
   if (loading) {
     return (
@@ -244,19 +213,14 @@ export default function MaintenanceDetailScreen() {
       <AppShell routeKey="maintenance" title="Record Not Found" subtitle="">
         <View style={styles.centered}>
           <Text style={styles.notFoundText}>Record not found or access denied.</Text>
-          <Pressable style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonInteraction]} onPress={() => router.replace('/maintenance')}>
-            <View style={styles.buttonContent}>
-              <GearActionIcon size="sm" />
-              <Text style={styles.primaryButtonText}>Back to Maintenance</Text>
-            </View>
-          </Pressable>
+          <Button title="Back to Maintenance" onPress={() => router.replace('/maintenance')} variant="primary" icon="arrow-back" />
         </View>
       </AppShell>
     );
   }
 
-  const severityColor = getNextServiceColor(record.next_service_date, colors.border);
-  const typeColor = TYPE_COLORS[record.type] || colors.brandAccent;
+  const severityColor = getNextServiceColor(colors, record.next_service_date);
+  const typeColor = typeColorMap[record.type] || colors.brandAccent;
   const editTotal = (parseFloat(editPartsCost) || 0) + (parseFloat(editLaborCost) || 0);
 
   return (
@@ -272,38 +236,19 @@ export default function MaintenanceDetailScreen() {
                 <Text style={styles.recordTitle}>{record.title}</Text>
               )}
               <View style={styles.badgeRow}>
-                <View style={[styles.typeBadge, { backgroundColor: typeColor + '33', borderColor: typeColor }]}>
-                  <Text style={[styles.typeBadgeText, { color: typeColor }]}>{record.type}</Text>
-                </View>
+                <Badge label={record.type} variant={TYPE_BADGE_VARIANT[record.type] ?? 'neutral'} color={typeColor} />
                 {record.next_service_date && (
-                  <View style={[styles.typeBadge, { backgroundColor: severityColor + '33', borderColor: severityColor }]}>
-                    <Text style={[styles.typeBadgeText, { color: severityColor }]}>
-                      Next: {formatDate(record.next_service_date)}
-                    </Text>
-                  </View>
+                  <Badge label={`Next: ${formatDate(record.next_service_date)}`} color={severityColor} />
                 )}
               </View>
             </View>
             <View style={styles.headerActions}>
               {!editing ? (
-                <Pressable style={({ pressed }) => [styles.editButton, pressed && styles.buttonInteraction]} onPress={() => setEditing(true)}>
-                  <Text style={styles.editButtonText}>Edit</Text>
-                </Pressable>
+                <Button title="Edit" onPress={() => setEditing(true)} variant="ghost" size="sm" />
               ) : (
                 <>
-                  <Pressable style={({ pressed }) => [styles.cancelEditButton, pressed && styles.buttonInteraction]} onPress={() => setEditing(false)}>
-                    <Text style={styles.cancelEditText}>Cancel</Text>
-                  </Pressable>
-                  <Pressable style={({ pressed }) => [styles.saveEditButton, pressed && styles.buttonInteraction]} onPress={handleSave} disabled={saving}>
-                    {saving ? (
-                      <ActivityIndicator size="small" color={colors.background} />
-                    ) : (
-                      <View style={styles.buttonContent}>
-                        <GearActionIcon size="sm" />
-                        <Text style={styles.saveEditText}>Save</Text>
-                      </View>
-                    )}
-                  </Pressable>
+                  <Button title="Cancel" onPress={() => setEditing(false)} variant="secondary" size="sm" />
+                  <Button title="Save" onPress={handleSave} variant="primary" size="sm" icon="checkmark" disabled={saving} loading={saving} />
                 </>
               )}
             </View>
@@ -318,7 +263,17 @@ export default function MaintenanceDetailScreen() {
             <View style={styles.metaItem}>
               <Text style={styles.metaLabel}>Date</Text>
               {editing ? (
-                <TextInput style={styles.input} value={editDate} onChangeText={setEditDate} placeholder="YYYY-MM-DD" placeholderTextColor={colors.textSecondary} />
+                <Pressable
+                  style={({ pressed }) => [styles.input, styles.dateButton, { opacity: pressed ? pressedOpacity : 1 }]}
+                  onPress={() => setActiveDatePicker('editDate')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Select date"
+                >
+                  <Text style={editDate ? styles.dateButtonText : styles.dateButtonPlaceholder}>
+                    {editDate ? formatDate(editDate) : 'Tap to select date'}
+                  </Text>
+                  <Text style={styles.dateButtonIcon}>📅</Text>
+                </Pressable>
               ) : (
                 <Text style={styles.metaValue}>{formatDate(record.date)}</Text>
               )}
@@ -341,7 +296,12 @@ export default function MaintenanceDetailScreen() {
                 {TYPES.map((opt) => {
                   const active = editType === opt.value;
                   return (
-                    <Pressable key={opt.value} onPress={() => setEditType(opt.value)} style={({ pressed }) => [styles.chip, active && styles.chipActive, pressed && styles.buttonInteraction]}>
+                    <Pressable
+                      key={opt.value}
+                      onPress={() => setEditType(opt.value)}
+                      style={({ pressed }) => [styles.chip, active && styles.chipActive, { opacity: pressed ? pressedOpacity : 1 }]}
+                      accessibilityLabel={opt.label}
+                    >
                       <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt.label}</Text>
                     </Pressable>
                   );
@@ -450,7 +410,17 @@ export default function MaintenanceDetailScreen() {
               <View style={styles.row}>
                 <View style={[styles.group, { flex: 1 }]}>
                   <Text style={styles.metaLabel}>Date</Text>
-                  <TextInput style={styles.input} value={editNextDate} onChangeText={setEditNextDate} placeholder="YYYY-MM-DD" placeholderTextColor={colors.textSecondary} />
+                  <Pressable
+                    style={({ pressed }) => [styles.input, styles.dateButton, { opacity: pressed ? pressedOpacity : 1 }]}
+                    onPress={() => setActiveDatePicker('editNextDate')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Select date"
+                  >
+                    <Text style={editNextDate ? styles.dateButtonText : styles.dateButtonPlaceholder}>
+                      {editNextDate ? formatDate(editNextDate) : 'Tap to select date'}
+                    </Text>
+                    <Text style={styles.dateButtonIcon}>📅</Text>
+                  </Pressable>
                 </View>
                 <View style={[styles.group, { flex: 1 }]}>
                   <Text style={styles.metaLabel}>Mileage</Text>
@@ -491,29 +461,132 @@ export default function MaintenanceDetailScreen() {
 
           {/* Warranty */}
           {record.warranty_covered && (
-            <View style={styles.warrantyBanner}>
-              <Text style={styles.warrantyText}>Warranty Covered</Text>
-            </View>
+            <ErrorBanner message="Warranty Covered" variant="success" />
           )}
 
           {/* Delete */}
           {!editing && (
             <View style={styles.dangerZone}>
-              <Pressable
-                style={({ pressed }) => [styles.deleteButton, pressed && styles.buttonInteraction]}
+              <Button
+                title="Delete Record"
                 onPress={handleDelete}
+                variant="danger"
                 disabled={deleting}
-              >
-                {deleting ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.deleteButtonText}>Delete Record</Text>
-                )}
-              </Pressable>
+                loading={deleting}
+                accessibilityHint="Permanently delete this maintenance record"
+              />
             </View>
           )}
         </View>
       </ScrollView>
+
+      {/* ── Date Picker (iOS: inline sheet; Android: native dialog; Web: custom calendar) ── */}
+      {Platform.OS === 'web' && (
+        <CalendarPicker
+          visible={activeDatePicker !== null}
+          value={activeDatePicker === 'editDate' ? editDate : editNextDate}
+          onChange={(iso) => {
+            if (activeDatePicker === 'editDate') setEditDate(iso);
+            else setEditNextDate(iso);
+            setActiveDatePicker(null);
+          }}
+          onClose={() => setActiveDatePicker(null)}
+        />
+      )}
+      {Platform.OS === 'ios' && activeDatePicker !== null && (
+        <Modal transparent animationType="slide" onRequestClose={() => setActiveDatePicker(null)}>
+          <View style={styles.pickerOverlayWrapper}>
+            <OverlayBackdrop onDismiss={() => setActiveDatePicker(null)} />
+            <View style={styles.pickerSheet}>
+              <View style={styles.pickerToolbar}>
+                <Pressable onPress={() => setActiveDatePicker(null)} accessibilityLabel="Cancel">
+                  <Text style={styles.pickerCancel}>Cancel</Text>
+                </Pressable>
+                <Text style={styles.pickerTitle}>Select Date</Text>
+                <Pressable onPress={() => setActiveDatePicker(null)} accessibilityLabel="Done">
+                  <Text style={styles.pickerDone}>Done</Text>
+                </Pressable>
+              </View>
+              <DateTimePicker
+                value={
+                  activeDatePicker === 'editDate'
+                    ? (editDate ? new Date(editDate + 'T12:00:00') : new Date())
+                    : (editNextDate ? new Date(editNextDate + 'T12:00:00') : new Date())
+                }
+                mode="date"
+                display="inline"
+                onChange={handleDateChange}
+                themeVariant="dark"
+                style={styles.pickerInline}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+      {Platform.OS === 'android' && activeDatePicker !== null && (
+        <DateTimePicker
+          value={
+            activeDatePicker === 'editDate'
+              ? (editDate ? new Date(editDate + 'T12:00:00') : new Date())
+              : (editNextDate ? new Date(editNextDate + 'T12:00:00') : new Date())
+          }
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+        />
+      )}
     </AppShell>
   );
+}
+
+function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    scroll: { flex: 1 },
+    content: { padding: sp[4], paddingBottom: sp[10] },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: sp[5], gap: sp[4] },
+    notFoundText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.md, textAlign: 'center' },
+    card: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, backgroundColor: colors.surface, padding: sp[4], gap: sp[4], maxWidth: 840, width: '100%', alignSelf: 'center' },
+    recordHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: sp[3], borderLeftWidth: 4, paddingLeft: sp[3] },
+    recordTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.xl },
+    badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: sp[2], marginTop: sp[2] },
+    headerActions: { flexDirection: 'row', gap: sp[2], alignItems: 'center' },
+    metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: sp[3] },
+    metaItem: { minWidth: 120, flex: 1, gap: sp[1] },
+    metaLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: letterSpacings.wide },
+    metaValue: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+    section: { gap: sp[2], borderTopWidth: 1, borderTopColor: colors.border, paddingTop: sp[3] },
+    sectionTitle: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: letterSpacings.widest },
+    costGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: sp[4] },
+    costItem: { minWidth: 100, flex: 1, gap: sp[1] },
+    totalValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
+    descText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, lineHeight: 22 },
+    listItem: { flexDirection: 'row', gap: sp[2], alignItems: 'flex-start' },
+    listItemBullet: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+    listItemText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, flex: 1 },
+    photoGallery: { flexDirection: 'row', flexWrap: 'wrap', gap: sp[2] },
+    galleryPhoto: { width: 100, height: 100, borderRadius: radii.md },
+    dangerZone: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: sp[4], alignItems: 'flex-start' },
+    group: { gap: sp[1] },
+    row: { flexDirection: 'row', gap: sp[2], flexWrap: 'wrap' },
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: sp[2] },
+    chip: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, backgroundColor: colors.surfaceAlt, paddingHorizontal: sp[3], justifyContent: 'center', alignItems: 'center' },
+    chipActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
+    chipText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+    chipTextActive: { color: colors.textPrimary },
+    input: { minHeight: touchMinHeight, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, color: colors.textPrimary, paddingHorizontal: sp[3], fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+    notesInput: { minHeight: 80, textAlignVertical: 'top', paddingTop: sp[2] },
+    dtcBadge: { borderWidth: 1, borderColor: colors.warning, borderRadius: radii.sm, paddingHorizontal: sp[2], paddingVertical: sp[1] },
+    dtcBadgeText: { color: colors.warning, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+    dateButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    dateButtonText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+    dateButtonPlaceholder: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+    dateButtonIcon: { fontSize: 16 },
+    pickerOverlayWrapper: { flex: 1, justifyContent: 'flex-end' },
+    pickerSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, paddingBottom: sp[8] },
+    pickerToolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: sp[5], paddingVertical: sp[3], borderBottomWidth: 1, borderBottomColor: colors.border },
+    pickerTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
+    pickerCancel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.md },
+    pickerDone: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
+    pickerInline: { alignSelf: 'center' },
+  });
 }

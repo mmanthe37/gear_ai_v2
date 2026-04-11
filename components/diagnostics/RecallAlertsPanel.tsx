@@ -4,6 +4,7 @@ import GearActionIcon from '../branding/GearActionIcon';
 import { radii } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import { sp, pressedOpacity } from '../../theme/spacing';
 import type { RecallAlert, TSBResult } from '../../types/diagnostic';
 
 interface Props {
@@ -30,15 +31,15 @@ export default function RecallAlertsPanel({ recalls, tsbs, loading, onAcknowledg
   }
 
   const styles = StyleSheet.create({
-    container: { gap: 16 },
-    section: { gap: 8 },
-    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    container: { gap: sp[4] },
+    section: { gap: sp[2] },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: sp[2] },
     sectionTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
     countBadge: { backgroundColor: colors.danger, borderRadius: radii.full, minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
     countText: { color: '#fff', fontFamily: fontFamilies.heading, fontSize: 10 },
     centeredState: { minHeight: 100, justifyContent: 'center', alignItems: 'center', gap: 8 },
     stateText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-    emptyState: { alignItems: 'center', paddingVertical: 24, gap: 6 },
+    emptyState: { alignItems: 'center', paddingVertical: sp[6], gap: 6 },
     emptyIcon: { fontSize: 32, color: colors.success },
     emptyTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
     emptySubtitle: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
@@ -50,11 +51,11 @@ export default function RecallAlertsPanel({ recalls, tsbs, loading, onAcknowledg
       overflow: 'hidden',
     },
     recallAcknowledged: { borderColor: colors.border, opacity: 0.7 },
-    recallRow: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 },
+    recallRow: { flexDirection: 'row', alignItems: 'center', padding: sp[3], gap: 10 },
     checkmark: { color: colors.success, fontSize: 16, flexShrink: 0 },
     recallComponent: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, flex: 1 },
     recallCampaign: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 2 },
-    tsbCard: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: 12, gap: 4 },
+    tsbCard: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: sp[3], gap: sp[1] },
     tsbSubject: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
     tsbMeta: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
     tsbSummary: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, lineHeight: 16, marginTop: 2 },
@@ -158,21 +159,21 @@ function RecallCard({ recall, expanded, onToggle, onAcknowledge, acknowledging }
     recallCard: {
       backgroundColor: colors.surfaceAlt,
       borderWidth: 1,
-      borderColor: 'rgba(239,68,68,0.3)',
+      borderColor: `${colors.danger}4D`,
       borderRadius: radii.md,
       overflow: 'hidden',
     },
-    recallHeader: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 },
+    recallHeader: { flexDirection: 'row', alignItems: 'center', padding: sp[3], gap: 10 },
     recallHeaderLeft: { flex: 1, flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-    alertDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.danger, marginTop: 4, flexShrink: 0 },
+    alertDot: { width: sp[2], height: sp[2], borderRadius: sp[1], backgroundColor: colors.danger, marginTop: sp[1], flexShrink: 0 },
     recallComponent: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, flex: 1 },
     recallCampaign: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 2 },
     chevron: { color: colors.textSecondary, fontSize: 10 },
-    recallBody: { borderTopWidth: 1, borderTopColor: colors.border, padding: 12, gap: 10 },
+    recallBody: { borderTopWidth: 1, borderTopColor: colors.border, padding: sp[3], gap: 10 },
     recallField: { gap: 2 },
     fieldLabel: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
     fieldValue: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, lineHeight: 18 },
-    recallActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
+    recallActions: { flexDirection: 'row', gap: sp[2], marginTop: sp[1] },
     actionBtn: { flex: 1, minHeight: 36, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center' },
     actionLink: { borderWidth: 1, borderColor: colors.brandAccent },
     actionLinkText: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
@@ -182,7 +183,7 @@ function RecallCard({ recall, expanded, onToggle, onAcknowledge, acknowledging }
   });
   return (
     <View style={styles.recallCard}>
-      <Pressable onPress={onToggle} style={styles.recallHeader}>
+      <Pressable onPress={onToggle} style={styles.recallHeader} accessibilityLabel={`Recall: ${recall.component}`}>
         <View style={styles.recallHeaderLeft}>
           <View style={styles.alertDot} />
           <View style={{ flex: 1 }}>
@@ -212,16 +213,18 @@ function RecallCard({ recall, expanded, onToggle, onAcknowledge, acknowledging }
           <View style={styles.recallActions}>
             {recall.remedy_url && (
               <Pressable
-                style={({ pressed }) => [styles.actionBtn, styles.actionLink, pressed && { opacity: 0.75 }]}
+                style={({ pressed }) => [styles.actionBtn, styles.actionLink, pressed && { opacity: pressedOpacity }]}
                 onPress={() => recall.remedy_url && Linking.openURL(recall.remedy_url)}
+                accessibilityLabel="View on NHTSA"
               >
                 <Text style={styles.actionLinkText}>View on NHTSA ↗</Text>
               </Pressable>
             )}
             <Pressable
-              style={({ pressed }) => [styles.actionBtn, styles.actionAck, pressed && { opacity: 0.85 }]}
+              style={({ pressed }) => [styles.actionBtn, styles.actionAck, pressed && { opacity: pressedOpacity }]}
               onPress={onAcknowledge}
               disabled={acknowledging}
+              accessibilityLabel="Mark Acknowledged"
             >
               {acknowledging ? (
                 <ActivityIndicator color="#000" size="small" />

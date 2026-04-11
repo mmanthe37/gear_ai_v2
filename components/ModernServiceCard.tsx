@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
+import { sp } from '../theme/spacing';
+import { fontWeights } from '../theme/typography';
 
 interface ModernServiceCardProps {
   title: string;
@@ -14,11 +16,7 @@ interface ModernServiceCardProps {
   onPress?: () => void;
 }
 
-const priorityColors = {
-  low: '#00FF00',
-  medium: '#FF8C00',
-  high: '#FF4500',
-};
+// priorityColors resolved inside component via useTheme()
 
 const priorityIcons: Record<'low' | 'medium' | 'high', keyof typeof Ionicons.glyphMap> = {
   low: 'checkmark-circle',
@@ -36,12 +34,12 @@ export default function ModernServiceCard({
 }: ModernServiceCardProps) {
   const { theme, colors } = useTheme();
   const blurTint = theme === 'light' ? 'light' : 'dark';
-  const priorityColor = priorityColors[priority];
+  const priorityColor = { low: colors.success, medium: colors.warning, high: colors.danger }[priority];
   const priorityIcon = priorityIcons[priority];
 
   const styles = StyleSheet.create({
     container: {
-      marginBottom: 12,
+      marginBottom: sp[3],
       borderRadius: 16,
       overflow: 'hidden',
       shadowColor: colors.actionAccent,
@@ -60,15 +58,15 @@ export default function ModernServiceCard({
       backgroundColor: colors.surface,
     },
     content: {
-      padding: 16,
+      padding: sp[4],
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 12,
+      marginBottom: sp[3],
     },
     iconContainer: {
-      marginRight: 12,
+      marginRight: sp[3],
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.3,
@@ -86,20 +84,20 @@ export default function ModernServiceCard({
     },
     title: {
       fontSize: 17,
-      fontWeight: '800',
+      fontWeight: fontWeights.extrabold,
       color: colors.textPrimary,
-      marginBottom: 4,
+      marginBottom: sp[1],
     },
     description: {
       fontSize: 13,
       color: colors.textSecondary,
-      marginBottom: 4,
-      fontWeight: '500',
+      marginBottom: sp[1],
+      fontWeight: fontWeights.medium,
     },
     vehicle: {
       fontSize: 12,
       color: colors.actionAccent,
-      fontWeight: '600',
+      fontWeight: fontWeights.semibold,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
     },
@@ -107,18 +105,18 @@ export default function ModernServiceCard({
       alignItems: 'flex-end',
       backgroundColor: colors.surfaceAlt,
       borderRadius: 8,
-      padding: 8,
+      padding: sp[2],
     },
     dueDate: {
       fontSize: 15,
-      fontWeight: '800',
+      fontWeight: fontWeights.extrabold,
       color: colors.textPrimary,
     },
     dueLabel: {
       fontSize: 10,
       color: colors.warning,
       marginTop: 2,
-      fontWeight: '700',
+      fontWeight: fontWeights.bold,
       letterSpacing: 1,
     },
     progressBar: {
@@ -132,7 +130,7 @@ export default function ModernServiceCard({
   });
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress}>
+    <TouchableOpacity style={styles.container} onPress={onPress} accessibilityLabel={`${title} - ${priority} priority`}>
       <BlurView intensity={25} tint={blurTint} style={styles.blur}>
         <LinearGradient
           colors={[colors.cardGlow, `${colors.cardGlow}80`, `${colors.cardGlow}30`]}

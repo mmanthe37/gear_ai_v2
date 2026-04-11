@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import { sp } from '../theme/spacing';
+import { typeScale } from '../theme/typography';
 
 interface ChatBubbleProps {
   message: string;
@@ -13,8 +15,8 @@ export default function ChatBubble({ message, isUser, timestamp }: ChatBubblePro
 
   const styles = StyleSheet.create({
     container: {
-      marginVertical: 4,
-      paddingHorizontal: 16,
+      marginVertical: sp[1],
+      paddingHorizontal: sp[4],
     },
     userContainer: {
       alignItems: 'flex-end',
@@ -24,7 +26,7 @@ export default function ChatBubble({ message, isUser, timestamp }: ChatBubblePro
     },
     bubble: {
       maxWidth: '80%',
-      padding: 12,
+      padding: sp[3],
       borderRadius: 20,
     },
     userBubble: {
@@ -36,7 +38,7 @@ export default function ChatBubble({ message, isUser, timestamp }: ChatBubblePro
       borderBottomLeftRadius: 4,
     },
     message: {
-      fontSize: 16,
+      fontSize: typeScale.md,
       lineHeight: 20,
     },
     userMessage: {
@@ -46,8 +48,8 @@ export default function ChatBubble({ message, isUser, timestamp }: ChatBubblePro
       color: colors.textPrimary,
     },
     timestamp: {
-      fontSize: 12,
-      marginTop: 4,
+      fontSize: typeScale.xs,
+      marginTop: sp[1],
     },
     userTimestamp: {
       color: 'rgba(255,255,255,0.7)',
@@ -58,7 +60,10 @@ export default function ChatBubble({ message, isUser, timestamp }: ChatBubblePro
   });
 
   return (
-    <View style={[styles.container, isUser ? styles.userContainer : styles.aiContainer]}>
+    <View
+      style={[styles.container, isUser ? styles.userContainer : styles.aiContainer]}
+      accessibilityLabel={`${isUser ? 'You' : 'AI'}: ${message.slice(0, 80)}`}
+    >
       <View style={[styles.bubble, isUser ? styles.userBubble : styles.aiBubble]}>
         <Text style={[styles.message, isUser ? styles.userMessage : styles.aiMessage]}>
           {message}

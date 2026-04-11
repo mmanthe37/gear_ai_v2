@@ -7,6 +7,7 @@ import ErrorBoundary from '../components/ErrorBoundary';
 import { AuthProvider } from '../contexts/AuthContext';
 import { AppShellProvider } from '../contexts/AppShellContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import { sp } from '../theme/spacing';
 
 function RootLayoutInner() {
   const { theme, colors } = useTheme();
@@ -15,21 +16,12 @@ function RootLayoutInner() {
     Manrope: require('../assets/fonts/Manrope-VariableFont_wght.ttf'),
   });
 
-  const styles = StyleSheet.create({
-    loading: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-    },
-    loadingLogo: {
-      marginBottom: 14,
-    },
-  });
-
   if (!fontsLoaded) {
     return (
-      <View style={styles.loading}>
+      <View
+        accessibilityLabel="Loading application"
+        style={[styles.loading, { backgroundColor: colors.background }]}
+      >
         <GearLogo variant="micro" size="lg" style={styles.loadingLogo} />
         <ActivityIndicator size="large" color={colors.brandAccent} />
       </View>
@@ -55,4 +47,15 @@ export default function RootLayout() {
     </ErrorBoundary>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingLogo: {
+    marginBottom: sp[4],
+  },
+});
 

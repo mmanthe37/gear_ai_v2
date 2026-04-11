@@ -55,25 +55,21 @@ async function checkDatabase(): Promise<ServiceStatus> {
 }
 
 /**
- * Check if Firebase Auth is accessible
+ * Check if Supabase Auth is accessible
  */
 async function checkAuth(): Promise<ServiceStatus> {
   try {
-    const FIREBASE_AUTH_DOMAIN = process.env.FIREBASE_AUTH_DOMAIN;
-    if (!FIREBASE_AUTH_DOMAIN) {
-      return { status: 'unknown', message: 'FIREBASE_AUTH_DOMAIN not configured' };
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    if (!supabaseUrl) {
+      return { status: 'unknown', message: 'SUPABASE_URL not configured' };
     }
-
     const start = Date.now();
-    const response = await fetch(`https://${FIREBASE_AUTH_DOMAIN}`, {
-      method: 'HEAD',
-    });
+    const response = await fetch(`${supabaseUrl}/auth/v1/health`);
     const responseTime = Date.now() - start;
-
     return {
-      status: response.ok || response.status === 404 ? 'up' : 'down',
+      status: response.ok ? 'up' : 'down',
       responseTime,
-      message: 'Firebase Auth reachable',
+      message: response.ok ? 'Supabase Auth reachable' : `HTTP ${response.status}`,
     };
   } catch (error) {
     return {
@@ -181,17 +177,13 @@ export async function getHealthStatus(): Promise<HealthStatus> {
  */
 export function validateEnvironment(): { valid: boolean; missing: string[] } {
   const required = [
-    'FIREBASE_API_KEY',
-    'FIREBASE_AUTH_DOMAIN',
-    'FIREBASE_PROJECT_ID',
-    'SUPABASE_URL',
-    'SUPABASE_ANON_KEY',
+    'EXPO_PUBLIC_SUPABASE_URL',
+    'EXPO_PUBLIC_SUPABASE_ANON_KEY',
   ];
 
   // Optional but recommended for full functionality
   const optional = [
     'OPENAI_API_KEY',
-    'VEHICLE_DATABASES_API_KEY',
   ];
   const missingOptional = optional.filter(key => !process.env[key]);
   if (missingOptional.length > 0) {

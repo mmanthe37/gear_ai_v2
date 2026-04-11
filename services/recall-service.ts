@@ -1,60 +1,28 @@
 /**
  * Gear AI CoPilot - Recall & TSB Service
  *
- * NHTSA recall database lookups by VIN and make/model/year.
- * TSB (Technical Service Bulletin) lookups.
- * Local recall acknowledgment tracking via Supabase.
+ * Pure NHTSA API calls are delegated to the shared automotive domain layer
+ * (`lib/automotive/recall-checker`). This file keeps the Supabase-dependent
+ * acknowledgment / enrichment logic that is specific to the mobile app.
  */
 
 import { supabase } from '../lib/supabase';
-import { RecallAlert, TSBResult } from '../types/diagnostic';
-import { NHTSARecall } from '../types/manual';
+import { RecallAlert } from '../types/diagnostic';
 
-const NHTSA_RECALLS_BASE = 'https://api.nhtsa.gov/recalls/recallsByVehicle';
-const NHTSA_VIN_RECALLS_BASE = 'https://api.nhtsa.gov/recalls/recallsByVehicleId';
-const NHTSA_COMPLAINTS_BASE = 'https://api.nhtsa.gov/complaints/complaintsByVehicle';
-const DEFAULT_TIMEOUT_MS = 8000;
+// Pure NHTSA functions from shared domain layer
+import {
+  checkRecallsByVehicle,
+  lookupTSBs,
+  lookupComplaints,
+  fetchWithTimeout,
+} from '../lib/automotive';
 
-function fetchWithTimeout(url: string, ms = DEFAULT_TIMEOUT_MS): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
-  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
-}
+// Re-export so existing app imports (`from '../services/recall-service'`) still work
+export { checkRecallsByVehicle, lookupTSBs, lookupComplaints, fetchWithTimeout };
 
-// ---------------------------------------------------------------------------
-// NHTSA Recall lookups
-// ---------------------------------------------------------------------------
-
-/**
- * Check NHTSA recalls by make/model/year (free, no API key).
- */
-export async function checkRecallsByVehicle(
-  make: string,
-  model: string,
-  year: number
-): Promise<NHTSARecall[]> {
-  try {
-    const url = `${NHTSA_RECALLS_BASE}?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&modelYear=${year}`;
-    const res = await fetchWithTimeout(url);
-    if (!res.ok) return [];
-    const json = await res.json();
-    return (json.results || []).map((r: any) => ({
-      NHTSACampaignNumber: r.NHTSACampaignNumber || '',
-      ReportReceivedDate: r.ReportReceivedDate || '',
-      Component: r.Component || '',
-      Summary: r.Summary || '',
-      Consequence: r.Consequence || '',
-      Remedy: r.Remedy || '',
-      Manufacturer: r.Manufacturer || '',
-      ModelYear: r.ModelYear || String(year),
-      Make: r.Make || make,
-      Model: r.Model || model,
-    }));
-  } catch (err) {
-    console.warn('[RecallService] checkRecallsByVehicle failed:', err);
-    return [];
-  }
-}
+// Re-export types from the app's canonical type files
+export type { NHTSARecall } from '../types/manual';
+export type { TSBResult } from '../types/diagnostic';
 
 /**
  * Enrich recall list into RecallAlert objects for a vehicle_id.
@@ -90,41 +58,6 @@ export async function getRecallAlerts(
       acknowledged_at: ack?.acknowledged_at,
     };
   });
-}
-
-// ---------------------------------------------------------------------------
-// TSB lookups via NHTSA Complaints / public TSB API
-// ---------------------------------------------------------------------------
-
-/**
- * Fetch Technical Service Bulletins for a vehicle.
- * Uses NHTSA TSB API (free, no key required).
- */
-export async function lookupTSBs(
-  make: string,
-  model: string,
-  year: number
-): Promise<TSBResult[]> {
-  try {
-    const url = `https://api.nhtsa.gov/tsbs/tsbsByVehicle?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&modelYear=${year}`;
-    const res = await fetchWithTimeout(url);
-    if (!res.ok) return [];
-    const json = await res.json();
-    return (json.results || []).map((r: any, i: number) => ({
-      tsb_id: `tsb-${i}-${r.documentId || r.NHTSAItemNumber || i}`,
-      document_id: r.documentId || r.NHTSAItemNumber || '',
-      make: r.Make || make,
-      model: r.Model || model,
-      year: r.ModelYear || String(year),
-      subject: r.Subject || r.subject || 'Technical Service Bulletin',
-      summary: r.Summary || r.summary || '',
-      issue_date: r.IssueDate || r.issueDate,
-      category: r.Category || r.category,
-    }));
-  } catch (err) {
-    console.warn('[RecallService] lookupTSBs failed:', err);
-    return [];
-  }
 }
 
 // ---------------------------------------------------------------------------

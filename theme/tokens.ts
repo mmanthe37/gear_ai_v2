@@ -23,6 +23,15 @@ export const darkColors = {
   accentTintStrong: 'rgba(51, 214, 210, 0.16)',
   cardGlow: 'rgba(30, 144, 255, 0.2)',
   loadingOverlay: 'rgba(11, 17, 23, 0.35)',
+  // Semantic – banners / feedback
+  successBannerBg: 'rgba(34, 197, 94, 0.12)',
+  warningBannerBg: 'rgba(245, 158, 11, 0.14)',
+  dangerBannerBg: 'rgba(239, 68, 68, 0.12)',
+  // Semantic – modal overlay
+  modalOverlay: 'rgba(4, 8, 12, 0.60)',
+  // Semantic – disabled state
+  disabled: '#3A4A5C',
+  disabledText: '#6B7B8D',
 };
 
 export const lightColors = {
@@ -48,6 +57,12 @@ export const lightColors = {
   accentTintStrong: 'rgba(14, 165, 233, 0.16)',
   cardGlow: 'rgba(14, 165, 233, 0.12)',
   loadingOverlay: 'rgba(255, 255, 255, 0.5)',
+  successBannerBg: 'rgba(22, 163, 74, 0.10)',
+  warningBannerBg: 'rgba(217, 119, 6, 0.10)',
+  dangerBannerBg: 'rgba(220, 38, 38, 0.10)',
+  modalOverlay: 'rgba(15, 23, 42, 0.50)',
+  disabled: '#CBD5E1',
+  disabledText: '#94A3B8',
 };
 
 export const amoledColors = {
@@ -73,6 +88,12 @@ export const amoledColors = {
   accentTintStrong: 'rgba(51, 214, 210, 0.16)',
   cardGlow: 'rgba(74, 163, 255, 0.15)',
   loadingOverlay: 'rgba(0, 0, 0, 0.5)',
+  successBannerBg: 'rgba(34, 197, 94, 0.12)',
+  warningBannerBg: 'rgba(245, 158, 11, 0.14)',
+  dangerBannerBg: 'rgba(239, 68, 68, 0.12)',
+  modalOverlay: 'rgba(0, 0, 0, 0.75)',
+  disabled: '#2A2A2A',
+  disabledText: '#555555',
 };
 
 /** Backward-compatible alias — do not remove */
@@ -96,3 +117,35 @@ export const shell = {
   sidebarCollapsed: 84,
   headerHeight: 86,
 };
+
+/** Cross-platform shadow / elevation presets. */
+export const elevation = {
+  none: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  sm: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  md: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  lg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+} as const;

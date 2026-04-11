@@ -201,3 +201,27 @@ export type {
   SubscriptionStatus,
   TierLimits,
 } from './subscription-service';
+
+// OEM manual source database (40+ manufacturers)
+export {
+  getOemSource,
+  generateOemCandidateUrls,
+  getOemPortalUrl,
+  supportsVinLookup,
+  getSupportedMakes,
+} from './oem-manual-sources';
+
+// Multi-strategy web manual discovery
+export {
+  discoverManualUrl,
+  isSafeUrl,
+  strictVerifyPdf,
+  buildManualSearchQueries,
+  getManualPortalFallback,
+} from './web-manual-scraper';
+
+// AI-powered manual research
+export {
+  researchManualWithAI,
+  quickAISuggestion,
+} from './ai-manual-research';

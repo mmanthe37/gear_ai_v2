@@ -5,7 +5,65 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { User, SignUpData, AuthCredentials } from '../types/user';
+
+export function buildFallbackUser(authUser: SupabaseAuthUser): User {
+  const now = new Date().toISOString();
+  return {
+    user_id: authUser.id,
+    email: authUser.email || '',
+    display_name: authUser.user_metadata?.display_name ?? undefined,
+    tier: 'free',
+    subscription_status: 'none',
+    created_at: now,
+    updated_at: now,
+    last_login_at: now,
+    preferences: {},
+  };
+}
+
+async function ensureUserProfile(authUser: SupabaseAuthUser): Promise<User> {
+  const { data: existingProfile, error: existingError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('user_id', authUser.id)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(`Failed to fetch user profile: ${existingError.message}`);
+  }
+
+  if (existingProfile) {
+    await supabase
+      .from('users')
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('user_id', authUser.id);
+    return existingProfile;
+  }
+
+  const fallback = buildFallbackUser(authUser);
+  const { data: newProfile, error: createError } = await supabase
+    .from('users')
+    .insert({
+      user_id: authUser.id,
+      email: authUser.email || '',
+      display_name: authUser.user_metadata?.display_name || null,
+      tier: 'free',
+      subscription_status: 'none',
+      last_login_at: new Date().toISOString(),
+      preferences: {},
+    })
+    .select()
+    .single();
+
+  if (createError) {
+    console.error('[Auth] Failed to create profile:', createError.message);
+    return fallback;
+  }
+
+  return newProfile || fallback;
+}
 
 /**
  * Sign up a new user with email and password
@@ -21,27 +79,8 @@ export async function signUp(signUpData: SignUpData): Promise<{ user: User | nul
 
   if (authError) throw new Error(authError.message);
   if (!authData.user) throw new Error('Sign up failed');
-
-  // Create user profile in public.users
-  const { data: userProfile, error: profileError } = await supabase
-    .from('users')
-    .insert({
-      user_id: authData.user.id,
-      email: authData.user.email || '',
-      display_name: display_name || null,
-      tier: 'free',
-      subscription_status: 'none',
-      last_login_at: new Date().toISOString(),
-      preferences: {},
-    })
-    .select()
-    .single();
-
-  if (profileError) {
-    console.error('Error creating user profile:', profileError);
-  }
-
-  return { user: userProfile || null };
+  const userProfile = await ensureUserProfile(authData.user);
+  return { user: userProfile };
 }
 
 /**
@@ -58,41 +97,8 @@ export async function signIn(credentials: AuthCredentials): Promise<{ user: User
   }
   console.log('[Auth] Sign in successful, user:', data.user.id);
 
-  // Fetch or auto-create user profile (handles accounts created before the DB trigger existed)
-  let { data: userProfile } = await supabase
-    .from('users')
-    .select('*')
-    .eq('user_id', data.user.id)
-    .single();
-
-  if (!userProfile) {
-    console.log('[Auth] No profile found, creating one for:', data.user.id);
-    const { data: newProfile, error: createError } = await supabase
-      .from('users')
-      .insert({
-        user_id: data.user.id,
-        email: data.user.email || '',
-        display_name: data.user.user_metadata?.display_name || null,
-        tier: 'free',
-        subscription_status: 'none',
-        last_login_at: new Date().toISOString(),
-        preferences: {},
-      })
-      .select()
-      .single();
-    if (createError) {
-      console.error('[Auth] Failed to create profile:', createError.message);
-    } else {
-      userProfile = newProfile;
-    }
-  } else {
-    await supabase
-      .from('users')
-      .update({ last_login_at: new Date().toISOString() })
-      .eq('user_id', data.user.id);
-  }
-
-  return { user: userProfile || null };
+  const userProfile = await ensureUserProfile(data.user);
+  return { user: userProfile };
 }
 
 /**
@@ -130,7 +136,13 @@ export async function getUserById(userId: string): Promise<User | null> {
     .single();
 
   if (error) {
-    console.error('Error fetching user:', error);
+    if (error.code !== 'PGRST116') {
+      console.error('Error fetching user:', error);
+    }
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser && authUser.id === userId) {
+      return buildFallbackUser(authUser);
+    }
     return null;
   }
   return data;

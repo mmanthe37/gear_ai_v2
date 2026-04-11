@@ -47,8 +47,9 @@ import type {
   VehicleFullContext,
   ParsedMaintenanceLog,
 } from '../../types/chat';
-import { radii } from '../../theme/tokens';
-import { fontFamilies, typeScale } from '../../theme/typography';
+import { sp, touchMinHeight, pressedOpacity } from '../../theme/spacing';
+import { typeScale, fontFamilies, fontWeights, letterSpacings } from '../../theme/typography';
+import { elevation, radii } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface Message {
@@ -675,7 +676,7 @@ export default function ChatScreen() {
           <View style={styles.chatToolbar}>
             <Pressable
               accessibilityRole="button"
-              style={({ pressed }) => [styles.toolbarBtn, pressed && styles.buttonInteraction]}
+              style={({ pressed }) => [styles.toolbarBtn, pressed && styles.pressedState]}
               onPress={() => {
                 loadHistory();
                 setView('history');
@@ -695,7 +696,7 @@ export default function ChatScreen() {
 
             <Pressable
               accessibilityRole="button"
-              style={({ pressed }) => [styles.toolbarBtn, styles.toolbarBtnAccent, pressed && styles.buttonInteraction]}
+              style={({ pressed }) => [styles.toolbarBtn, styles.toolbarBtnAccent, pressed && styles.pressedState]}
               onPress={handleNewChat}
             >
               <Ionicons name="create-outline" size={16} color={colors.brandAccent} />
@@ -708,7 +709,7 @@ export default function ChatScreen() {
             <View style={styles.historyPanel}>
               <Pressable
                 accessibilityRole="button"
-                style={({ pressed }) => [styles.historyBack, pressed && styles.buttonInteraction]}
+                style={({ pressed }) => [styles.historyBack, pressed && styles.pressedState]}
                 onPress={() => setView('chat')}
               >
                 <Ionicons name="arrow-back-outline" size={18} color={colors.textSecondary} />
@@ -735,7 +736,7 @@ export default function ChatScreen() {
                         style={({ pressed }) => [
                           styles.sessionItem,
                           isActive && styles.sessionItemActive,
-                          pressed && styles.buttonInteraction,
+                          pressed && styles.pressedState,
                         ]}
                       >
                         <Ionicons
@@ -773,7 +774,8 @@ export default function ChatScreen() {
                   {proactiveSuggestions.map((s, i) => (
                     <Pressable
                       key={i}
-                      style={({ pressed }) => [styles.suggestionChip, pressed && styles.buttonInteraction]}
+                      accessibilityLabel={`Suggestion: ${s}`}
+                      style={({ pressed }) => [styles.suggestionChip, pressed && styles.pressedState]}
                       onPress={() => setInputText(s)}
                     >
                       <Text style={styles.suggestionText} numberOfLines={2}>{s}</Text>
@@ -796,10 +798,11 @@ export default function ChatScreen() {
                     maxLength={17}
                   />
                   <View style={styles.vinButtons}>
-                    <Pressable style={styles.vinCancelBtn} onPress={() => setShowVinInput(false)}>
+                    <Pressable accessibilityLabel="Cancel VIN lookup" style={styles.vinCancelBtn} onPress={() => setShowVinInput(false)}>
                       <Text style={styles.vinCancelText}>Cancel</Text>
                     </Pressable>
                     <Pressable
+                      accessibilityLabel="Analyze VIN for pre-purchase inspection"
                       style={[styles.vinAnalyzeBtn, isAnalyzingVin && styles.sendButtonDisabled]}
                       onPress={handlePrepurchaseAnalysis}
                       disabled={isAnalyzingVin}
@@ -862,6 +865,7 @@ export default function ChatScreen() {
                               </Text>
                               <View style={styles.maintenanceCardButtons}>
                                 <Pressable
+                                  accessibilityLabel="Dismiss maintenance log"
                                   style={styles.maintenanceDismissBtn}
                                   onPress={() => setMessages((prev) =>
                                     prev.map((m) => m.id === message.id ? { ...m, pendingMaintenanceLog: undefined } : m)
@@ -870,6 +874,7 @@ export default function ChatScreen() {
                                   <Text style={styles.maintenanceDismissText}>Dismiss</Text>
                                 </Pressable>
                                 <Pressable
+                                  accessibilityLabel="Save maintenance record"
                                   style={styles.maintenanceSaveBtn}
                                   onPress={() => handleSaveMaintenanceLog(message.pendingMaintenanceLog!, message.id)}
                                 >
@@ -898,7 +903,7 @@ export default function ChatScreen() {
                     ])
                   }
                   disabled={isResponding || isAnalyzingPhoto}
-                  style={({ pressed }) => [styles.attachButton, pressed && styles.buttonInteraction]}
+                  style={({ pressed }) => [styles.attachButton, pressed && styles.pressedState]}
                 >
                   <Ionicons name="camera-outline" size={20} color={colors.textSecondary} />
                 </Pressable>
@@ -907,7 +912,7 @@ export default function ChatScreen() {
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => setShowVinInput((v) => !v)}
-                  style={({ pressed }) => [styles.attachButton, pressed && styles.buttonInteraction]}
+                  style={({ pressed }) => [styles.attachButton, pressed && styles.pressedState]}
                 >
                   <Ionicons name="search-outline" size={20} color={colors.textSecondary} />
                 </Pressable>
@@ -934,7 +939,7 @@ export default function ChatScreen() {
                   disabled={isResponding}
                   style={({ pressed }) => [
                     styles.sendButton,
-                    pressed && styles.buttonInteraction,
+                    pressed && styles.pressedState,
                     isResponding && styles.sendButtonDisabled,
                   ]}
                 >
@@ -958,14 +963,14 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     flex: 1,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    backgroundColor: 'rgba(18, 26, 35, 0.75)',
+    backgroundColor: colors.navBg,
   },
   messagesScroll: {
     flex: 1,
   },
   messagesContent: {
-    padding: 16,
-    gap: 10,
+    padding: sp[4],
+    gap: sp[3],
   },
   messageRow: {
     flexDirection: 'row',
@@ -980,12 +985,12 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     maxWidth: '86%',
     borderRadius: radii.md,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
+    paddingHorizontal: sp[3],
+    paddingVertical: sp[3],
+    gap: sp[2],
   },
   userBubble: {
-    backgroundColor: 'rgba(74, 163, 255, 0.22)',
+    backgroundColor: colors.accentTintStrong,
     borderColor: colors.actionAccent,
   },
   assistantBubble: {
@@ -1006,7 +1011,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: sp[2],
   },
   loadingText: {
     color: colors.textSecondary,
@@ -1016,53 +1021,53 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   sourceWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: sp[2],
   },
   sourcePill: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.full,
     backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: sp[2],
+    paddingVertical: sp[1],
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: sp[1],
     maxWidth: 220,
   },
   sourceText: {
     color: colors.textSecondary,
     fontFamily: fontFamilies.body,
-    fontSize: 11,
+    fontSize: typeScale.xs,
   },
   inputRow: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: sp[3],
+    paddingVertical: sp[3],
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 8,
+    gap: sp[2],
     backgroundColor: colors.surface,
   },
   input: {
     flex: 1,
-    minHeight: 44,
+    minHeight: touchMinHeight,
     maxHeight: 130,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.md,
     backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: sp[3],
+    paddingVertical: sp[3],
     color: colors.textPrimary,
     fontFamily: fontFamilies.body,
     fontSize: typeScale.sm,
     textAlignVertical: 'top',
   },
   sendButton: {
-    width: 44,
-    height: 44,
+    width: touchMinHeight,
+    height: touchMinHeight,
     borderRadius: radii.md,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1071,26 +1076,29 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   sendButtonDisabled: {
     opacity: 0.6,
   },
+  pressedState: {
+    opacity: pressedOpacity,
+  },
   buttonInteraction: {
-    opacity: 0.92,
+    opacity: pressedOpacity,
   },
   chatToolbar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: sp[3],
+    paddingVertical: sp[2],
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
-    gap: 8,
+    gap: sp[2],
   },
   toolbarBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: sp[2],
+    paddingHorizontal: sp[3],
+    paddingVertical: sp[2],
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1098,7 +1106,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   },
   toolbarBtnAccent: {
     borderColor: colors.brandAccent,
-    backgroundColor: 'rgba(51, 214, 210, 0.10)',
+    backgroundColor: colors.accentTint,
   },
   toolbarBtnLabel: {
     color: colors.textSecondary,
@@ -1110,14 +1118,14 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   },
   historyPanel: {
     flex: 1,
-    backgroundColor: 'rgba(18, 26, 35, 0.75)',
+    backgroundColor: colors.navBg,
   },
   historyBack: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    gap: sp[2],
+    paddingHorizontal: sp[4],
+    paddingVertical: sp[4],
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -1131,21 +1139,21 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     fontFamily: fontFamilies.body,
     fontSize: typeScale.sm,
     textAlign: 'center',
-    marginTop: 40,
-    paddingHorizontal: 24,
+    marginTop: sp[10],
+    paddingHorizontal: sp[6],
   },
   sessionList: {
     flex: 1,
   },
   sessionListContent: {
-    padding: 12,
-    gap: 8,
+    padding: sp[3],
+    gap: sp[2],
   },
   sessionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 12,
+    gap: sp[3],
+    padding: sp[3],
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1153,7 +1161,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   },
   sessionItemActive: {
     borderColor: colors.brandAccent,
-    backgroundColor: 'rgba(51, 214, 210, 0.10)',
+    backgroundColor: colors.accentTint,
   },
   sessionCopy: {
     flex: 1,
@@ -1183,9 +1191,9 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     maxHeight: 72,
   },
   suggestionsContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
+    paddingHorizontal: sp[3],
+    paddingVertical: sp[2],
+    gap: sp[2],
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -1193,9 +1201,9 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     borderWidth: 1,
     borderColor: colors.brandAccent,
     borderRadius: radii.full,
-    backgroundColor: 'rgba(51, 214, 210, 0.08)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: colors.accentTint,
+    paddingHorizontal: sp[3],
+    paddingVertical: sp[2],
     maxWidth: 240,
   },
   suggestionText: {
@@ -1206,7 +1214,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   // F2: Photo attachment button
   attachButton: {
     width: 38,
-    height: 44,
+    height: touchMinHeight,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: radii.md,
@@ -1216,19 +1224,19 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   },
   // F5: Maintenance log confirmation card
   maintenanceCard: {
-    marginTop: 8,
+    marginTop: sp[2],
     borderWidth: 1,
     borderColor: colors.brandAccent,
     borderRadius: radii.md,
-    backgroundColor: 'rgba(51, 214, 210, 0.08)',
-    padding: 12,
-    gap: 8,
+    backgroundColor: colors.accentTint,
+    padding: sp[3],
+    gap: sp[2],
   },
   maintenanceCardTitle: {
     color: colors.brandAccent,
     fontFamily: fontFamilies.body,
     fontSize: typeScale.sm,
-    fontWeight: '600',
+    fontWeight: fontWeights.semibold,
   },
   maintenanceCardDetail: {
     color: colors.textSecondary,
@@ -1237,12 +1245,12 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   },
   maintenanceCardButtons: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
+    gap: sp[2],
+    marginTop: sp[1],
   },
   maintenanceDismissBtn: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: sp[2],
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1255,52 +1263,52 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   },
   maintenanceSaveBtn: {
     flex: 2,
-    paddingVertical: 8,
+    paddingVertical: sp[2],
     borderRadius: radii.md,
     backgroundColor: colors.brandAccent,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: sp[2],
   },
   maintenanceSaveText: {
     color: '#fff',
     fontFamily: fontFamilies.body,
     fontSize: typeScale.xs,
-    fontWeight: '600',
+    fontWeight: fontWeights.semibold,
   },
   // F6: Pre-purchase VIN panel
   vinPanel: {
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
-    padding: 14,
-    gap: 10,
+    padding: sp[4],
+    gap: sp[3],
   },
   vinPanelTitle: {
     color: colors.textPrimary,
     fontFamily: fontFamilies.body,
     fontSize: typeScale.sm,
-    fontWeight: '600',
+    fontWeight: fontWeights.semibold,
   },
   vinInput: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.md,
     backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: sp[3],
+    paddingVertical: sp[3],
     color: colors.textPrimary,
     fontFamily: fontFamilies.body,
     fontSize: typeScale.sm,
   },
   vinButtons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: sp[2],
   },
   vinCancelBtn: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: sp[3],
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1313,7 +1321,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   },
   vinAnalyzeBtn: {
     flex: 2,
-    paddingVertical: 10,
+    paddingVertical: sp[3],
     borderRadius: radii.md,
     backgroundColor: colors.brandAccent,
     alignItems: 'center',
@@ -1323,7 +1331,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     color: '#fff',
     fontFamily: fontFamilies.body,
     fontSize: typeScale.sm,
-    fontWeight: '600',
+    fontWeight: fontWeights.semibold,
   },
 });
 }

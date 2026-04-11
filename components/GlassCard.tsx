@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, AccessibilityRole } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
+import { sp } from '../theme/spacing';
 
 interface GlassCardProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ interface GlassCardProps {
   intensity?: number;
   tint?: 'light' | 'dark' | 'default';
   variant?: 'default' | 'performance' | 'warning' | 'success';
+  accessibilityRole?: AccessibilityRole;
 }
 
 export default function GlassCard({
@@ -17,7 +19,8 @@ export default function GlassCard({
   style,
   intensity = 25,
   tint,
-  variant = 'default'
+  variant = 'default',
+  accessibilityRole,
 }: GlassCardProps) {
   const { theme, colors } = useTheme();
   const resolvedTint = tint ?? (theme === 'light' ? 'light' : 'dark');
@@ -26,21 +29,21 @@ export default function GlassCard({
     switch (variant) {
       case 'performance':
         return [
-          'rgba(255, 69, 0, 0.3)',
-          'rgba(255, 140, 0, 0.2)',
-          'rgba(255, 69, 0, 0.1)'
+          `${colors.danger}4D`,
+          `${colors.danger}33`,
+          `${colors.danger}1A`,
         ] as const;
       case 'warning':
         return [
-          'rgba(255, 193, 7, 0.3)',
-          'rgba(255, 235, 59, 0.2)',
-          'rgba(255, 193, 7, 0.1)'
+          `${colors.warning}4D`,
+          `${colors.warning}33`,
+          `${colors.warning}1A`,
         ] as const;
       case 'success':
         return [
-          'rgba(76, 175, 80, 0.3)',
-          'rgba(139, 195, 74, 0.2)',
-          'rgba(76, 175, 80, 0.1)'
+          `${colors.success}4D`,
+          `${colors.success}33`,
+          `${colors.success}1A`,
         ] as const;
       default:
         return [
@@ -54,11 +57,11 @@ export default function GlassCard({
   const getBorderColor = () => {
     switch (variant) {
       case 'performance':
-        return 'rgba(255, 69, 0, 0.4)';
+        return `${colors.danger}66`;
       case 'warning':
-        return 'rgba(255, 193, 7, 0.4)';
+        return `${colors.warning}66`;
       case 'success':
-        return 'rgba(76, 175, 80, 0.4)';
+        return `${colors.success}66`;
       default:
         return colors.border;
     }
@@ -86,12 +89,12 @@ export default function GlassCard({
     },
     content: {
       flex: 1,
-      padding: 20,
+      padding: sp[5],
     },
   });
 
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, style]} accessibilityRole={accessibilityRole}>
       <BlurView
         intensity={intensity}
         tint={resolvedTint}

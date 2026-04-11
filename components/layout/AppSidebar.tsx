@@ -6,6 +6,8 @@ import type { ShellRouteKey, SidebarChatItem, SidebarVehicleItem } from '../../t
 import { radii } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import { sp, pressedOpacity } from '../../theme/spacing';
+import { letterSpacings } from '../../theme/typography';
 import GearLogo from '../branding/GearLogo';
 import { PRIMARY_NAV_ITEMS, getTopNavActiveKey } from './nav-config';
 
@@ -55,7 +57,7 @@ export default function AppSidebar({
       borderBottomColor: colors.border,
       justifyContent: 'center',
       alignItems: 'center',
-      gap: 4,
+      gap: sp[1],
       paddingHorizontal: 10,
       paddingVertical: 10,
     },
@@ -72,38 +74,38 @@ export default function AppSidebar({
       gap: 18,
     },
     section: {
-      gap: 8,
+      gap: sp[2],
       paddingHorizontal: 10,
     },
     sectionTitle: {
       color: colors.textSecondary,
       fontFamily: fontFamilies.heading,
       fontSize: typeScale.xs,
-      letterSpacing: 0.8,
+      letterSpacing: letterSpacings.wider,
       textTransform: 'uppercase',
-      marginBottom: 4,
+      marginBottom: sp[1],
     },
     navItem: {
       minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      gap: sp[3],
       borderRadius: radii.md,
-      paddingHorizontal: 12,
+      paddingHorizontal: sp[3],
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
     },
     navItemCollapsed: {
       justifyContent: 'center',
-      paddingHorizontal: 8,
+      paddingHorizontal: sp[2],
     },
     navItemActive: {
       borderColor: colors.brandAccent,
       backgroundColor: colors.accentTint,
     },
     navItemInteraction: {
-      opacity: 0.92,
+      opacity: pressedOpacity,
     },
     navLabel: {
       color: colors.textSecondary,
@@ -123,11 +125,11 @@ export default function AppSidebar({
       borderRadius: radii.md,
       backgroundColor: colors.surface,
       paddingHorizontal: 10,
-      paddingVertical: 8,
+      paddingVertical: sp[2],
     },
     listItemCollapsed: {
       justifyContent: 'center',
-      paddingVertical: 12,
+      paddingVertical: sp[3],
     },
     listCopy: {
       flex: 1,
@@ -161,7 +163,7 @@ export default function AppSidebar({
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
-      paddingHorizontal: 12,
+      paddingHorizontal: sp[3],
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
@@ -177,7 +179,7 @@ export default function AppSidebar({
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surfaceAlt,
-      paddingHorizontal: 12,
+      paddingHorizontal: sp[3],
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,

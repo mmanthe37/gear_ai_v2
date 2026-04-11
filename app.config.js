@@ -12,6 +12,10 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.gearai.copilot",
+      infoPlist: {
+        NSCameraUsageDescription: "Gear AI CoPilot uses your camera to take photos of your vehicle, parts, and maintenance records.",
+        NSPhotoLibraryUsageDescription: "Gear AI CoPilot accesses your photo library to attach vehicle and maintenance images.",
+      },
     },
     android: {
       adaptiveIcon: {
@@ -47,7 +51,7 @@ module.exports = {
     },
     extra: {
       eas: {
-        projectId: "your-project-id-here",
+        projectId: "49386610-9dc4-4205-9742-445f04b982da",
       },
       // Firebase Configuration
       firebaseApiKey: process.env.FIREBASE_API_KEY,

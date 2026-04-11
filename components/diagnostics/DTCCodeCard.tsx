@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import GearActionIcon from '../branding/GearActionIcon';
 import { radii } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import { sp, pressedOpacity } from '../../theme/spacing';
 import type { DiagnosticCode, DTCAnalysis } from '../../types/diagnostic';
 
 interface Props {
@@ -25,7 +27,7 @@ export default function DTCCodeCard({ code, onAnalyze, onResolve, analysis: prop
   const { colors } = useTheme();
 
   const severityColor: Record<DiagnosticCode['severity'], string> = {
-    critical: '#DC2626',
+    critical: colors.danger,
     high: colors.danger,
     medium: colors.warning,
     low: colors.success,
@@ -45,47 +47,67 @@ export default function DTCCodeCard({ code, onAnalyze, onResolve, analysis: prop
       borderColor: colors.border,
       borderLeftWidth: 3,
       borderRadius: radii.md,
-      padding: 12,
-      gap: 6,
+      padding: sp[3],
     },
     header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
     headerLeft: { flex: 1, gap: 6 },
     codeText: { fontFamily: fontFamilies.heading, fontSize: typeScale.xl },
     badges: { flexDirection: 'row', gap: 6 },
-    badge: { borderWidth: 1, borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 2 },
+    badge: { borderWidth: 1, borderRadius: radii.full, paddingHorizontal: sp[2], paddingVertical: 2 },
     badgeText: { fontFamily: fontFamilies.body, fontSize: 10, textTransform: 'uppercase' },
     chevron: { color: colors.textSecondary, fontSize: 10, marginTop: 4 },
     description: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
     meta: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-    expandedBody: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, marginTop: 6, gap: 14 },
-    section: { gap: 8 },
+    expandedBody: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: sp[3], marginTop: 6, gap: 14 },
+    section: { gap: sp[2] },
     sectionLabel: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 1 },
     ffGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-    ffCell: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, paddingHorizontal: 8, paddingVertical: 4, minWidth: '30%' },
+    ffCell: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, paddingHorizontal: sp[2], paddingVertical: sp[1], minWidth: '30%' },
     ffKey: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: 10, textTransform: 'uppercase' },
     ffVal: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
     aiText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, lineHeight: 20 },
-    subsection: { gap: 8 },
+    subsection: { gap: sp[2] },
     subLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
-    causeRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
-    likelihoodDot: { width: 8, height: 8, borderRadius: 4, marginTop: 5, flexShrink: 0 },
+    causeRow: { flexDirection: 'row', gap: sp[2], alignItems: 'flex-start' },
+    likelihoodDot: { width: sp[2], height: sp[2], borderRadius: sp[1], marginTop: 5, flexShrink: 0 },
     causeName: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
     causeExp: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, lineHeight: 16 },
-    costRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-    costItem: { flex: 1, minWidth: '28%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, padding: 8, gap: 2 },
+    costRow: { flexDirection: 'row', gap: sp[2], flexWrap: 'wrap' },
+    costItem: { flex: 1, minWidth: '28%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, padding: sp[2], gap: 2 },
     costLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: 10, textTransform: 'uppercase' },
     costValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-    analyzeBtn: { backgroundColor: colors.brandAccent, borderRadius: radii.md, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
-    analyzeBtnContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    analyzeBtn: { backgroundColor: colors.brandAccent, borderRadius: radii.md, minHeight: sp[10], alignItems: 'center', justifyContent: 'center' },
+    analyzeBtnContent: { flexDirection: 'row', alignItems: 'center', gap: sp[2] },
     analyzeBtnText: { color: '#000', fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
     resolveBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, minHeight: 38, alignItems: 'center', justifyContent: 'center' },
     resolveBtnText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+    headerActions: { flexDirection: 'row', alignItems: 'center', gap: sp[2] },
+    iconBtn: { padding: 6, borderRadius: radii.sm },
+    iconBtnText: { fontSize: 14 },
+    copiedText: { color: colors.success, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   });
 
   const [expanded, setExpanded] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [resolving, setResolving] = useState(false);
   const [analysis, setAnalysis] = useState<DTCAnalysis | null>(propAnalysis ?? null);
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    await Clipboard.setStringAsync(code.code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleShare() {
+    const causes = analysis?.probable_causes_ranked
+      ?.map((c) => c.cause)
+      .join(', ') ?? '';
+    await Share.share({
+      message: `DTC Code: ${code.code}\n${code.description || ''}\n${causes}`,
+      title: `Gear AI - DTC ${code.code}`,
+    });
+  }
 
   async function handleAnalyze() {
     if (analysis) { setExpanded(true); return; }
@@ -113,8 +135,8 @@ export default function DTCCodeCard({ code, onAnalyze, onResolve, analysis: prop
   return (
     <View style={[styles.card, { borderLeftColor: accent }]}>
       {/* Header row */}
-      <Pressable onPress={() => setExpanded(!expanded)} style={styles.header}>
-        <View style={styles.headerLeft}>
+      <View style={styles.header}>
+        <Pressable onPress={() => setExpanded(!expanded)} style={styles.headerLeft} accessibilityLabel={`DTC ${code.code} details`}>
           <Text style={[styles.codeText, { color: accent }]}>{code.code}</Text>
           <View style={styles.badges}>
             <View style={[styles.badge, { borderColor: accent }]}>
@@ -124,9 +146,23 @@ export default function DTCCodeCard({ code, onAnalyze, onResolve, analysis: prop
               <Text style={[styles.badgeText, { color: statusColor[code.status] }]}>{code.status}</Text>
             </View>
           </View>
+        </Pressable>
+        <View style={styles.headerActions}>
+          {copied ? (
+            <Text style={styles.copiedText}>Copied!</Text>
+          ) : (
+            <Pressable onPress={handleCopy} style={({ pressed }) => [styles.iconBtn, pressed && { opacity: pressedOpacity }]} accessibilityLabel="Copy code">
+              <Text style={styles.iconBtnText}>⎘</Text>
+            </Pressable>
+          )}
+          <Pressable onPress={handleShare} style={({ pressed }) => [styles.iconBtn, pressed && { opacity: pressedOpacity }]} accessibilityLabel="Share code">
+            <Text style={styles.iconBtnText}>↑</Text>
+          </Pressable>
+          <Pressable onPress={() => setExpanded(!expanded)} style={styles.iconBtn} accessibilityLabel={expanded ? 'Collapse' : 'Expand'}>
+            <Text style={styles.chevron}>{expanded ? '▲' : '▼'}</Text>
+          </Pressable>
         </View>
-        <Text style={styles.chevron}>{expanded ? '▲' : '▼'}</Text>
-      </Pressable>
+      </View>
 
       <Text style={styles.description}>{code.description}</Text>
 
@@ -203,12 +239,20 @@ export default function DTCCodeCard({ code, onAnalyze, onResolve, analysis: prop
               {analysis.diy_vs_shop_reasoning && (
                 <Text style={styles.aiText}>{analysis.diy_vs_shop_reasoning}</Text>
               )}
+
+              {(code.recommended_actions?.length ?? 0) > 0 && (
+                <View style={styles.subsection}>
+                  <Text style={styles.subLabel}>Recommended Actions</Text>
+                  <Text style={styles.aiText}>{'• ' + code.recommended_actions!.join('\n• ')}</Text>
+                </View>
+              )}
             </View>
           ) : (
             <Pressable
-              style={({ pressed }) => [styles.analyzeBtn, pressed && { opacity: 0.85 }]}
+              style={({ pressed }) => [styles.analyzeBtn, pressed && { opacity: pressedOpacity }]}
               onPress={handleAnalyze}
               disabled={analyzing}
+              accessibilityLabel="AI Analyze This Code"
             >
               {analyzing ? (
                 <ActivityIndicator color="#000" size="small" />
@@ -224,9 +268,10 @@ export default function DTCCodeCard({ code, onAnalyze, onResolve, analysis: prop
           {/* Actions */}
           {code.status === 'active' && (
             <Pressable
-              style={({ pressed }) => [styles.resolveBtn, pressed && { opacity: 0.85 }]}
+              style={({ pressed }) => [styles.resolveBtn, pressed && { opacity: pressedOpacity }]}
               onPress={handleResolve}
               disabled={resolving}
+              accessibilityLabel="Mark as Resolved"
             >
               {resolving ? (
                 <ActivityIndicator color={colors.textPrimary} size="small" />

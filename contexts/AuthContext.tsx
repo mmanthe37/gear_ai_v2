@@ -4,7 +4,7 @@
  * Manages global authentication state using Supabase Auth
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { User, AuthCredentials, SignUpData } from '../types/user';
@@ -38,32 +38,65 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const resolveUserFromSession = useCallback(async (authUser: SupabaseUser): Promise<User> => {
+    try {
+      const profile = await authService.getUserById(authUser.id);
+      return profile || authService.buildFallbackUser(authUser);
+    } catch (profileError) {
+      console.error('[Auth] Failed to resolve user profile:', profileError);
+      return authService.buildFallbackUser(authUser);
+    }
+  }, []);
+
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      if (s?.user) {
-        authService.getUserById(s.user.id).then(profile => setUser(profile));
-      }
+    // Safety timeout — never let the app hang on the loading screen
+    const safetyTimeout = setTimeout(() => {
+      console.warn('[Auth] Safety timeout reached — forcing loading to false');
       setLoading(false);
-    });
+    }, 10_000);
+
+    // Get initial session with full error handling
+    supabase.auth.getSession()
+      .then(async ({ data: { session: s } }) => {
+        setSession(s);
+        if (s?.user) {
+          const profile = await resolveUserFromSession(s.user);
+          setUser(profile);
+        } else {
+          setUser(null);
+        }
+      })
+      .catch((error) => {
+        console.error('[Auth] getSession failed:', error);
+        // Clear any corrupted session state
+        setSession(null);
+        setUser(null);
+      })
+      .finally(() => {
+        clearTimeout(safetyTimeout);
+        setLoading(false);
+      });
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, s) => {
         setSession(s);
         if (s?.user) {
-          const profile = await authService.getUserById(s.user.id);
+          const profile = await resolveUserFromSession(s.user);
           setUser(profile);
         } else {
+          // No session → genuinely signed out
           setUser(null);
         }
         setLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      clearTimeout(safetyTimeout);
+      subscription.unsubscribe();
+    };
+  }, [resolveUserFromSession]);
 
   const handleSignIn = async (credentials: AuthCredentials) => {
     try {

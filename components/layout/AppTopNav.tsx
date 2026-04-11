@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { radii } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import { sp, pressedOpacity } from '../../theme/spacing';
 import type { ShellRouteKey } from '../../types/shell';
 import { PRIMARY_NAV_ITEMS, getTopNavActiveKey } from './nav-config';
 import GearLogo from '../branding/GearLogo';
@@ -27,7 +28,7 @@ export default function AppTopNav({ routeKey }: AppTopNavProps) {
     },
     row: {
       paddingHorizontal: 14,
-      paddingVertical: 8,
+      paddingVertical: sp[2],
       gap: 10,
       alignItems: 'center',
     },
@@ -47,7 +48,7 @@ export default function AppTopNav({ routeKey }: AppTopNavProps) {
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radii.full,
-      paddingHorizontal: 16,
+      paddingHorizontal: sp[4],
       backgroundColor: colors.surface,
     },
     buttonActive: {
@@ -55,7 +56,7 @@ export default function AppTopNav({ routeKey }: AppTopNavProps) {
       borderColor: colors.brandAccent,
     },
     buttonInteraction: {
-      opacity: 0.92,
+      opacity: pressedOpacity,
     },
     buttonText: {
       color: colors.textSecondary,
@@ -85,6 +86,7 @@ export default function AppTopNav({ routeKey }: AppTopNavProps) {
                 active && styles.buttonActive,
                 pressed && styles.buttonInteraction,
               ]}
+              accessibilityLabel={item.label}
             >
               <Text style={[styles.buttonText, active && styles.buttonTextActive]}>{item.label}</Text>
             </Pressable>

@@ -41,7 +41,7 @@
         "autoIncrement": true
       },
       "android": {
-        "buildType": "aab",
+        "buildType": "app-bundle",
         "gradleCommand": ":app:bundleRelease"
       },
       "env": {
@@ -52,9 +52,9 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "${APPLE_ID}",
-        "ascAppId": "${ASC_APP_ID}",
-        "appleTeamId": "${APPLE_TEAM_ID}"
+        "appleId": "michaelamanthe2@gmail.com",
+        "ascAppId": "6760318418",
+        "appleTeamId": "25QSUNYFC9"
       },
       "android": {
         "serviceAccountKeyPath": "${GOOGLE_SERVICE_ACCOUNT_PATH}",

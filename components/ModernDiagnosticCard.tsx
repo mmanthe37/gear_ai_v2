@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
+import { sp } from '../theme/spacing';
+import { fontWeights } from '../theme/typography';
 
 interface ModernDiagnosticCardProps {
   code: string;
@@ -14,11 +16,7 @@ interface ModernDiagnosticCardProps {
   onPress?: () => void;
 }
 
-const severityColors = {
-  low: '#00FF00',
-  medium: '#FF8C00',
-  high: '#FF4500',
-};
+// severityColors resolved inside component via useTheme()
 
 const severityIcons: Record<'low' | 'medium' | 'high', keyof typeof Ionicons.glyphMap> = {
   low: 'information-circle',
@@ -36,12 +34,12 @@ export default function ModernDiagnosticCard({
 }: ModernDiagnosticCardProps) {
   const { theme, colors } = useTheme();
   const blurTint = theme === 'light' ? 'light' : 'dark';
-  const severityColor = severityColors[severity];
+  const severityColor = { low: colors.success, medium: colors.warning, high: colors.danger }[severity];
   const severityIcon = severityIcons[severity];
 
   const styles = StyleSheet.create({
     container: {
-      marginBottom: 12,
+      marginBottom: sp[3],
       borderRadius: 16,
       overflow: 'hidden',
       shadowColor: colors.danger,
@@ -60,15 +58,15 @@ export default function ModernDiagnosticCard({
       backgroundColor: colors.surface,
     },
     content: {
-      padding: 16,
+      padding: sp[4],
     },
     header: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      marginBottom: 12,
+      marginBottom: sp[3],
     },
     iconContainer: {
-      marginRight: 12,
+      marginRight: sp[3],
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.3,
@@ -87,36 +85,36 @@ export default function ModernDiagnosticCard({
     codeContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 8,
+      marginBottom: sp[2],
     },
     code: {
       fontSize: 17,
-      fontWeight: '800',
+      fontWeight: fontWeights.extrabold,
       color: colors.textPrimary,
-      marginRight: 12,
+      marginRight: sp[3],
     },
     severityBadge: {
       paddingHorizontal: 10,
-      paddingVertical: 4,
+      paddingVertical: sp[1],
       borderRadius: 12,
     },
     severityText: {
       fontSize: 10,
-      fontWeight: '700',
+      fontWeight: fontWeights.bold,
       color: 'white',
       letterSpacing: 0.5,
     },
     description: {
       fontSize: 13,
       color: colors.textSecondary,
-      marginBottom: 4,
+      marginBottom: sp[1],
       lineHeight: 18,
-      fontWeight: '500',
+      fontWeight: fontWeights.medium,
     },
     vehicle: {
       fontSize: 12,
       color: colors.actionAccent,
-      fontWeight: '600',
+      fontWeight: fontWeights.semibold,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
     },
@@ -124,15 +122,15 @@ export default function ModernDiagnosticCard({
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingTop: 12,
+      paddingTop: sp[3],
       borderTopWidth: 1,
       borderTopColor: colors.border,
-      marginBottom: 8,
+      marginBottom: sp[2],
     },
     dateDetected: {
       fontSize: 11,
       color: colors.textSecondary,
-      fontWeight: '600',
+      fontWeight: fontWeights.semibold,
       letterSpacing: 0.5,
     },
     statusIndicator: {
@@ -143,7 +141,7 @@ export default function ModernDiagnosticCard({
       width: 8,
       height: 8,
       borderRadius: 4,
-      marginRight: 8,
+      marginRight: sp[2],
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.8,
@@ -160,7 +158,7 @@ export default function ModernDiagnosticCard({
   });
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress}>
+    <TouchableOpacity style={styles.container} onPress={onPress} accessibilityLabel={`Diagnostic ${code} - ${severity} severity`}>
       <BlurView intensity={25} tint={blurTint} style={styles.blur}>
         <LinearGradient
           colors={[colors.cardGlow, `${colors.cardGlow}80`, `${colors.cardGlow}30`]}

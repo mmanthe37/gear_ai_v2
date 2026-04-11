@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,9 +11,11 @@ import {
 } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import GearLogo from '../components/branding/GearLogo';
+import { Button, ErrorBanner } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
-import { radii } from '../theme/tokens';
 import { useTheme } from '../contexts/ThemeContext';
+import { sp, touchMinHeight } from '../theme/spacing';
+import { radii } from '../theme/tokens';
 import { fontFamilies, typeScale } from '../theme/typography';
 
 export default function LoginScreen() {
@@ -79,13 +79,13 @@ export default function LoginScreen() {
     scrollContent: {
       minHeight: '100%',
       justifyContent: 'center',
-      paddingHorizontal: 18,
-      paddingVertical: 30,
-      gap: 22,
+      paddingHorizontal: sp[5],
+      paddingVertical: sp[8],
+      gap: sp[6],
     },
     hero: {
       alignItems: 'center',
-      gap: 8,
+      gap: sp[2],
     },
     heroTitle: {
       color: colors.textPrimary,
@@ -105,8 +105,8 @@ export default function LoginScreen() {
       borderColor: colors.border,
       borderRadius: radii.lg,
       backgroundColor: colors.surface,
-      padding: 18,
-      gap: 14,
+      padding: sp[5],
+      gap: sp[4],
       maxWidth: 520,
       alignSelf: 'center',
       width: '100%',
@@ -122,7 +122,7 @@ export default function LoginScreen() {
       alignItems: 'center',
     },
     inputGroup: {
-      gap: 6,
+      gap: sp[2],
     },
     label: {
       color: colors.textSecondary,
@@ -130,65 +130,15 @@ export default function LoginScreen() {
       fontFamily: fontFamilies.body,
     },
     input: {
-      minHeight: 44,
+      minHeight: touchMinHeight,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radii.md,
       backgroundColor: colors.surfaceAlt,
       color: colors.textPrimary,
-      paddingHorizontal: 12,
+      paddingHorizontal: sp[3],
       fontFamily: fontFamilies.body,
       fontSize: typeScale.md,
-    },
-    submitButton: {
-      minHeight: 44,
-      borderRadius: radii.md,
-      backgroundColor: colors.brandAccent,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginTop: 6,
-    },
-    submitButtonText: {
-      color: colors.background,
-      fontFamily: fontFamilies.heading,
-      fontSize: typeScale.sm,
-    },
-    toggle: {
-      minHeight: 44,
-      borderRadius: radii.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.surfaceAlt,
-    },
-    toggleText: {
-      color: colors.textSecondary,
-      fontFamily: fontFamilies.body,
-      fontSize: typeScale.sm,
-    },
-    buttonDisabled: {
-      opacity: 0.6,
-    },
-    buttonInteraction: {
-      opacity: 0.92,
-    },
-    successBanner: {
-      borderWidth: 1,
-      borderColor: colors.success,
-      backgroundColor: 'rgba(34, 197, 94, 0.12)',
-      padding: 12,
-      borderRadius: radii.md,
-      gap: 4,
-    },
-    successText: {
-      color: colors.textPrimary,
-      fontFamily: fontFamilies.body,
-      fontSize: typeScale.sm,
-    },
-    successHighlight: {
-      color: colors.success,
-      fontFamily: fontFamilies.heading,
     },
   });
 
@@ -227,12 +177,11 @@ export default function LoginScreen() {
             </View>
 
             {!!successMessage && (
-              <View style={styles.successBanner}>
-                <Text style={styles.successText}>
-                  <Text style={styles.successHighlight}>Success: </Text>
-                  {successMessage}
-                </Text>
-              </View>
+              <ErrorBanner
+                variant="success"
+                message={successMessage}
+                onDismiss={() => setSuccessMessage('')}
+              />
             )}
 
             {isSignUp && (
@@ -245,6 +194,7 @@ export default function LoginScreen() {
                   autoCapitalize="words"
                   placeholder="Alex Driver"
                   placeholderTextColor={colors.textSecondary}
+                  accessibilityLabel="Display name"
                 />
               </View>
             )}
@@ -260,6 +210,7 @@ export default function LoginScreen() {
                 autoComplete="email"
                 placeholder="you@example.com"
                 placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="Email address"
               />
             </View>
 
@@ -274,39 +225,31 @@ export default function LoginScreen() {
                 autoComplete="password"
                 placeholder="password"
                 placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="Password"
               />
             </View>
 
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.submitButton,
-                pressed && styles.buttonInteraction,
-                isLoading && styles.buttonDisabled,
-              ]}
+            <Button
+              variant="primary"
+              title={isSignUp ? 'Create Account' : 'Sign In'}
               onPress={handleSubmit}
+              loading={isLoading}
               disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={colors.background} />
-              ) : (
-                <Text style={styles.submitButtonText}>{isSignUp ? 'Create Account' : 'Sign In'}</Text>
-              )}
-            </Pressable>
+              fullWidth
+              style={{ marginTop: sp[2] }}
+              accessibilityHint="Submit the authentication form"
+            />
 
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.toggle, pressed && styles.buttonInteraction]}
+            <Button
+              variant="secondary"
+              title={isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
               onPress={() => {
                 setSuccessMessage('');
                 setIsSignUp((prev) => !prev);
               }}
               disabled={isLoading}
-            >
-              <Text style={styles.toggleText}>
-                {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-              </Text>
-            </Pressable>
+              fullWidth
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -3,6 +3,7 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 import { radii } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import { sp } from '../../theme/spacing';
 import type { VehicleHealthScore } from '../../types/diagnostic';
 
 interface Props {
@@ -30,7 +31,7 @@ export default function HealthScoreGauge({ score, trend, size = 140 }: Props) {
   function scoreColor(s: number): string {
     if (s >= 80) return colors.success;
     if (s >= 60) return colors.warning;
-    if (s >= 40) return '#F97316'; // orange
+    if (s >= 40) return colors.warning;
     return colors.danger;
   }
 
@@ -55,7 +56,7 @@ export default function HealthScoreGauge({ score, trend, size = 140 }: Props) {
       backgroundColor: colors.surface,
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 2,
+      gap: sp[0],
     },
     scoreNum: {
       fontFamily: fontFamilies.heading,

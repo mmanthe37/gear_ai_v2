@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
+import { sp } from '../theme/spacing';
+import { typeScale, fontWeights } from '../theme/typography';
 
 interface ModernVehicleCardProps {
   make: string;
@@ -27,7 +29,7 @@ export default function ModernVehicleCard({
 
   const styles = StyleSheet.create({
     container: {
-      marginBottom: 16,
+      marginBottom: sp[4],
       borderRadius: 16,
       overflow: 'hidden',
       shadowColor: colors.brandAccent,
@@ -46,15 +48,15 @@ export default function ModernVehicleCard({
       backgroundColor: colors.surface,
     },
     content: {
-      padding: 20,
+      padding: sp[5],
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 16,
+      marginBottom: sp[4],
     },
     carIconContainer: {
-      marginRight: 16,
+      marginRight: sp[4],
     },
     carIconGradient: {
       width: 52,
@@ -71,15 +73,15 @@ export default function ModernVehicleCard({
       flex: 1,
     },
     vehicleName: {
-      fontSize: 20,
-      fontWeight: '800',
+      fontSize: typeScale.xl,
+      fontWeight: fontWeights.extrabold,
       color: colors.textPrimary,
-      marginBottom: 4,
+      marginBottom: sp[1],
     },
     vehicleYear: {
-      fontSize: 14,
+      fontSize: typeScale.sm,
       color: colors.actionAccent,
-      fontWeight: '600',
+      fontWeight: fontWeights.semibold,
     },
     statusIndicator: {
       flexDirection: 'row',
@@ -90,7 +92,7 @@ export default function ModernVehicleCard({
       height: 8,
       borderRadius: 4,
       backgroundColor: colors.success,
-      marginRight: 8,
+      marginRight: sp[2],
       shadowColor: colors.success,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.8,
@@ -99,17 +101,17 @@ export default function ModernVehicleCard({
     details: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 12,
+      marginBottom: sp[3],
     },
     detailItem: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     detailText: {
-      fontSize: 12,
+      fontSize: typeScale.xs,
       color: colors.textSecondary,
       marginLeft: 6,
-      fontWeight: '600',
+      fontWeight: fontWeights.semibold,
     },
     performanceBar: {
       height: 3,
@@ -122,7 +124,7 @@ export default function ModernVehicleCard({
   });
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress}>
+    <TouchableOpacity style={styles.container} onPress={onPress} accessibilityLabel={`${make} ${model} ${year}`}>
       <BlurView intensity={25} tint={blurTint} style={styles.blur}>
         <LinearGradient
           colors={[colors.cardGlow, `${colors.cardGlow}80`, `${colors.cardGlow}40`]}
@@ -134,7 +136,7 @@ export default function ModernVehicleCard({
             <View style={styles.header}>
               <View style={styles.carIconContainer}>
                 <LinearGradient
-                  colors={['#FF4500', '#FF8C00']}
+                  colors={[colors.danger, colors.warning]}
                   style={styles.carIconGradient}
                 >
                   <Ionicons name="car-sport" size={28} color="white" />
@@ -169,7 +171,7 @@ export default function ModernVehicleCard({
             
             <View style={styles.performanceBar}>
               <LinearGradient
-                colors={['#FF4500', '#FF8C00', colors.actionAccent]}
+                colors={[colors.danger, colors.warning, colors.actionAccent]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.performanceGradient}

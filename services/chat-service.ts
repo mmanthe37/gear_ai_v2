@@ -78,6 +78,7 @@ export async function getChatSession(
  */
 export async function getUserChatSessions(
   userId: string,
+  limit = 20,
   includeInactive: boolean = false
 ): Promise<ChatSession[]> {
   try {
@@ -90,7 +91,7 @@ export async function getUserChatSessions(
       query = query.eq('is_active', true);
     }
 
-    query = query.order('last_message_at', { ascending: false });
+    query = query.limit(limit).order('last_message_at', { ascending: false });
 
     const { data, error } = await query;
 

@@ -27,8 +27,10 @@ import { getUserVehicles } from '../../services/vehicle-service';
 import { supabase } from '../../lib/supabase';
 import type { MaintenanceTemplate, MaintenanceType, ServiceProvider } from '../../types/maintenance';
 import type { Vehicle } from '../../types/vehicle';
-import { radii } from '../../theme/tokens';
-import { fontFamilies, typeScale } from '../../theme/typography';
+import { elevation, radii } from '../../theme/tokens';
+import { fontFamilies, typeScale, fontWeights, letterSpacings } from '../../theme/typography';
+import { sp, touchMinHeight, pressedOpacity } from '../../theme/spacing';
+import { Button, Badge, ErrorBanner, OverlayBackdrop } from '../../components/ui';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const TYPES: { value: MaintenanceType; label: string }[] = [
@@ -63,6 +65,73 @@ const TEMPLATES: LocalTemplate[] = [
   { id: 'battery', title: 'Battery', type: 'repair', description: 'Battery replacement', default_parts: ['Car Battery'], estimated_cost_min: 100, estimated_cost_max: 250, interval_months: 48, est_parts_cost: 130, est_labor_cost: 40, est_tax_rate: 8 },
   { id: 'alignment', title: 'Wheel Alignment', type: 'routine', description: 'Four-wheel alignment service', estimated_cost_min: 75, estimated_cost_max: 200, interval_miles: 20000, interval_months: 24, est_parts_cost: 0, est_labor_cost: 125, est_tax_rate: 8 },
 ];
+
+const makeStyles = (colors: any) => StyleSheet.create({
+  scroll: { flex: 1 },
+  content: { padding: sp[4], paddingBottom: sp[10] },
+  card: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, backgroundColor: colors.surface, padding: sp[4], gap: sp[3], maxWidth: 840, width: '100%', alignSelf: 'center' },
+  cardTitle: { color: colors.textPrimary, fontSize: typeScale.lg, fontFamily: fontFamilies.heading },
+  group: { gap: sp[1] },
+  label: { color: colors.textSecondary, fontSize: typeScale.sm, fontFamily: fontFamilies.body },
+  input: { minHeight: touchMinHeight, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, color: colors.textPrimary, paddingHorizontal: sp[3], fontFamily: fontFamilies.body, fontSize: typeScale.md },
+  notesInput: { minHeight: 96, textAlignVertical: 'top', paddingTop: sp[3] },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: sp[2] },
+  column: { minWidth: 160, flex: 1 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: sp[2] },
+  chip: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, backgroundColor: colors.surfaceAlt, paddingHorizontal: sp[3], justifyContent: 'center', alignItems: 'center' },
+  chipActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
+  chipText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+  chipTextActive: { color: colors.textPrimary },
+  tplChip: { minHeight: 56, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, paddingHorizontal: sp[3], paddingVertical: sp[2], justifyContent: 'center', alignItems: 'center', gap: 2 },
+  tplChipText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+  tplChipSub: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: 10 },
+  sectionDivider: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: sp[3], marginTop: sp[1] },
+  sectionLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: letterSpacings.widest },
+  totalRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: sp[3] },
+  totalLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+  totalValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
+  inlinePartRow: { flexDirection: 'row', alignItems: 'center', gap: sp[2] },
+  iconBtn: { padding: sp[2], borderRadius: radii.sm, backgroundColor: colors.surfaceAlt },
+  iconBtnText: { color: colors.textSecondary, fontSize: typeScale.xs },
+  addPartButton: { minHeight: touchMinHeight, borderRadius: radii.md, borderWidth: 1, borderColor: colors.brandAccent, paddingHorizontal: sp[3], justifyContent: 'center' },
+  addPartButtonText: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+  photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: sp[2], alignItems: 'center' },
+  photoThumb: { width: 72, height: 72, borderRadius: radii.md, overflow: 'hidden', position: 'relative' },
+  photoImage: { width: 72, height: 72 },
+  photoRemove: { position: 'absolute', top: 2, right: 2, backgroundColor: colors.overlay, borderRadius: 10, width: 18, height: 18, alignItems: 'center', justifyContent: 'center' },
+  photoRemoveText: { color: '#fff', fontSize: 10 },
+  addPhotoButton: { minHeight: 72, minWidth: 72, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, justifyContent: 'center', alignItems: 'center' },
+  addPhotoButtonText: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: sp[2], flexWrap: 'wrap', marginTop: sp[2] },
+  buttonDisabled: { opacity: 0.6 },
+  dateButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  dateButtonText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.md },
+  dateButtonPlaceholder: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.md },
+  dateButtonIcon: { fontSize: 16 },
+  pickerOverlayWrapper: { flex: 1, justifyContent: 'flex-end' },
+  pickerSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, paddingBottom: sp[8] },
+  pickerToolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: sp[5], paddingVertical: sp[3], borderBottomWidth: 1, borderBottomColor: colors.border },
+  pickerTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
+  pickerCancel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.md },
+  pickerDone: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
+  pickerInline: { alignSelf: 'center' },
+  modalContainer: { flex: 1, backgroundColor: colors.background },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: sp[5], paddingTop: sp[6], borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.lg },
+  modalCloseBtn: { width: 32, height: 32, borderRadius: radii.full, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  modalCloseBtnText: { color: colors.textSecondary, fontSize: 14 },
+  modalSubtitle: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, paddingHorizontal: sp[5], paddingVertical: sp[2] },
+  modalList: { paddingHorizontal: sp[4], paddingBottom: sp[10], gap: sp[3] },
+  templateCard: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, backgroundColor: colors.surface, padding: sp[3], gap: sp[1] },
+  templateCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: sp[2] },
+  templateCardTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md, flex: 1 },
+  templateCardDesc: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+  templateCostRow: { flexDirection: 'row', flexWrap: 'wrap', gap: sp[2], marginTop: sp[1], alignItems: 'center' },
+  templateCostItem: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+  templateCostValue: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+  templateCostTotal: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.sm, marginLeft: 'auto' },
+  templateParts: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: 11, marginTop: sp[1] },
+});
 
 export default function MaintenanceNewScreen() {
   const { colors } = useTheme();
@@ -214,80 +283,7 @@ export default function MaintenanceNewScreen() {
     }
   };
 
-  const styles = StyleSheet.create({
-    scroll: { flex: 1 },
-    content: { padding: 16, paddingBottom: 40 },
-    card: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, backgroundColor: colors.surface, padding: 16, gap: 12, maxWidth: 840, width: '100%', alignSelf: 'center' },
-    cardTitle: { color: colors.textPrimary, fontSize: typeScale.lg, fontFamily: fontFamilies.heading },
-    group: { gap: 6 },
-    label: { color: colors.textSecondary, fontSize: typeScale.sm, fontFamily: fontFamilies.body },
-    input: { minHeight: 44, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, color: colors.textPrimary, paddingHorizontal: 12, fontFamily: fontFamilies.body, fontSize: typeScale.md },
-    notesInput: { minHeight: 96, textAlignVertical: 'top', paddingTop: 12 },
-    row: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-    column: { minWidth: 160, flex: 1 },
-    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    chip: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, backgroundColor: colors.surfaceAlt, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center' },
-    chipActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51, 214, 210, 0.14)' },
-    chipText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-    chipTextActive: { color: colors.textPrimary },
-    tplChip: { minHeight: 56, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, paddingHorizontal: 12, paddingVertical: 8, justifyContent: 'center', alignItems: 'center', gap: 2 },
-    tplChipText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-    tplChipSub: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: 10 },
-    sectionDivider: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, marginTop: 4 },
-    sectionLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 1 },
-    totalRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 12 },
-    totalLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-    totalValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
-    inlinePartRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    iconBtn: { padding: 8, borderRadius: radii.sm, backgroundColor: colors.surfaceAlt },
-    iconBtnText: { color: colors.textSecondary, fontSize: typeScale.xs },
-    addPartButton: { minHeight: 44, borderRadius: radii.md, borderWidth: 1, borderColor: colors.brandAccent, paddingHorizontal: 12, justifyContent: 'center' },
-    addPartButtonText: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-    photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'center' },
-    photoThumb: { width: 72, height: 72, borderRadius: radii.md, overflow: 'hidden', position: 'relative' },
-    photoImage: { width: 72, height: 72 },
-    photoRemove: { position: 'absolute', top: 2, right: 2, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, width: 18, height: 18, alignItems: 'center', justifyContent: 'center' },
-    photoRemoveText: { color: '#fff', fontSize: 10 },
-    addPhotoButton: { minHeight: 72, minWidth: 72, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, justifyContent: 'center', alignItems: 'center' },
-    addPhotoButtonText: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-    actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap', marginTop: 8 },
-    primaryButton: { minHeight: 44, borderRadius: radii.md, backgroundColor: colors.brandAccent, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
-    saveRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    primaryButtonText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-    secondaryButton: { minHeight: 44, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
-    secondaryButtonText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-    buttonDisabled: { opacity: 0.6 },
-    buttonInteraction: { opacity: 0.92 },
-    dateButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    dateButtonText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.md },
-    dateButtonPlaceholder: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.md },
-    dateButtonIcon: { fontSize: 16 },
-    pickerOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-    pickerSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, paddingBottom: 32 },
-    pickerToolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
-    pickerTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
-    pickerCancel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.md },
-    pickerDone: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
-    pickerInline: { alignSelf: 'center' },
-    modalContainer: { flex: 1, backgroundColor: colors.background },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 24, borderBottomWidth: 1, borderBottomColor: colors.border },
-    modalTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.lg },
-    modalCloseBtn: { width: 32, height: 32, borderRadius: radii.full, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-    modalCloseBtnText: { color: colors.textSecondary, fontSize: 14 },
-    modalSubtitle: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, paddingHorizontal: 20, paddingVertical: 10 },
-    modalList: { paddingHorizontal: 16, paddingBottom: 40, gap: 12 },
-    templateCard: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, backgroundColor: colors.surface, padding: 14, gap: 6 },
-    templateCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-    templateCardTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md, flex: 1 },
-    templateCardDesc: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-    templateCostRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4, alignItems: 'center' },
-    templateCostItem: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-    templateCostValue: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-    templateCostTotal: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.sm, marginLeft: 'auto' },
-    templateParts: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: 11, marginTop: 2 },
-    typeBadge: { borderWidth: 1, borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 2 },
-    typeBadgeText: { fontFamily: fontFamilies.body, fontSize: 10, textTransform: 'capitalize' },
-  });
+  const styles = makeStyles(colors);
 
   return (
     <AppShell routeKey="maintenance-new" title="New Maintenance Record" subtitle="Log service activity">
@@ -301,7 +297,7 @@ export default function MaintenanceNewScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={styles.chipRow}>
                 {TEMPLATES.map((tpl) => (
-                  <Pressable key={tpl.id} accessibilityRole="button" onPress={() => applyTemplate(tpl)} style={({ pressed }) => [styles.tplChip, pressed && styles.buttonInteraction]}>
+                  <Pressable key={tpl.id} accessibilityRole="button" accessibilityLabel={`Apply ${tpl.title} template`} onPress={() => applyTemplate(tpl)} style={({ pressed }) => [styles.tplChip, { opacity: pressed ? pressedOpacity : 1 }]}>
                     <Text style={styles.tplChipText}>{tpl.title}</Text>
                     <Text style={styles.tplChipSub}>${tpl.estimated_cost_min}-{tpl.estimated_cost_max}</Text>
                   </Pressable>
@@ -320,7 +316,7 @@ export default function MaintenanceNewScreen() {
                 {vehicles.map((v) => {
                   const active = vehicleId === v.vehicle_id;
                   return (
-                    <Pressable key={v.vehicle_id} accessibilityRole="button" onPress={() => setVehicleId(v.vehicle_id)} style={({ pressed }) => [styles.chip, active && styles.chipActive, pressed && styles.buttonInteraction]}>
+                    <Pressable key={v.vehicle_id} accessibilityRole="button" accessibilityLabel={`Select ${v.year} ${v.make} ${v.model}`} onPress={() => setVehicleId(v.vehicle_id)} style={({ pressed }) => [styles.chip, active && styles.chipActive, { opacity: pressed ? pressedOpacity : 1 }]}>
                       <Text style={[styles.chipText, active && styles.chipTextActive]}>{v.year} {v.make} {v.model}</Text>
                     </Pressable>
                   );
@@ -336,7 +332,7 @@ export default function MaintenanceNewScreen() {
               {TYPES.map((opt) => {
                 const active = type === opt.value;
                 return (
-                  <Pressable key={opt.value} accessibilityRole="button" onPress={() => setType(opt.value)} style={({ pressed }) => [styles.chip, active && styles.chipActive, pressed && styles.buttonInteraction]}>
+                  <Pressable key={opt.value} accessibilityRole="button" accessibilityLabel={opt.label} onPress={() => setType(opt.value)} style={({ pressed }) => [styles.chip, active && styles.chipActive, { opacity: pressed ? pressedOpacity : 1 }]}>
                     <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt.label}</Text>
                   </Pressable>
                 );
@@ -362,9 +358,10 @@ export default function MaintenanceNewScreen() {
             <View style={[styles.group, styles.column]}>
               <Text style={styles.label}>Date *</Text>
               <Pressable
-                style={({ pressed }) => [styles.input, styles.dateButton, pressed && styles.buttonInteraction]}
+                style={({ pressed }) => [styles.input, styles.dateButton, { opacity: pressed ? pressedOpacity : 1 }]}
                 onPress={() => setActiveDatePicker('date')}
                 accessibilityRole="button"
+                accessibilityLabel="Select date"
               >
                 <Text style={date ? styles.dateButtonText : styles.dateButtonPlaceholder}>
                   {date ? formatDisplayDate(date) : 'Select date'}
@@ -428,14 +425,14 @@ export default function MaintenanceNewScreen() {
                 placeholder="Part name"
                 placeholderTextColor={colors.textSecondary}
               />
-              <Pressable style={({ pressed }) => [styles.iconBtn, pressed && styles.buttonInteraction]} onPress={() => setInlineParts((prev) => prev.filter((_, idx) => idx !== i))}>
+              <Pressable accessibilityLabel="Remove part" style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? pressedOpacity : 1 }]} onPress={() => setInlineParts((prev) => prev.filter((_, idx) => idx !== i))}>
                 <Text style={styles.iconBtnText}>x</Text>
               </Pressable>
             </View>
           ))}
           <View style={styles.inlinePartRow}>
             <TextInput style={[styles.input, { flex: 1 }]} value={newPartName} onChangeText={setNewPartName} placeholder="Add part name" placeholderTextColor={colors.textSecondary} />
-            <Pressable style={({ pressed }) => [styles.addPartButton, pressed && styles.buttonInteraction]} onPress={() => { if (newPartName.trim()) { setInlineParts((prev) => [...prev, newPartName.trim()]); setNewPartName(''); } }}>
+            <Pressable accessibilityLabel="Add part" style={({ pressed }) => [styles.addPartButton, { opacity: pressed ? pressedOpacity : 1 }]} onPress={() => { if (newPartName.trim()) { setInlineParts((prev) => [...prev, newPartName.trim()]); setNewPartName(''); } }}>
               <Text style={styles.addPartButtonText}>+ Add</Text>
             </Pressable>
           </View>
@@ -448,12 +445,12 @@ export default function MaintenanceNewScreen() {
             {photoUris.map((uri, i) => (
               <View key={i} style={styles.photoThumb}>
                 <Image source={{ uri }} style={styles.photoImage} />
-                <Pressable style={styles.photoRemove} onPress={() => setPhotoUris((prev) => prev.filter((_, idx) => idx !== i))}>
+                <Pressable accessibilityLabel="Remove photo" style={styles.photoRemove} onPress={() => setPhotoUris((prev) => prev.filter((_, idx) => idx !== i))}>
                   <Text style={styles.photoRemoveText}>x</Text>
                 </Pressable>
               </View>
             ))}
-            <Pressable style={({ pressed }) => [styles.addPhotoButton, pressed && styles.buttonInteraction]} onPress={handleAddPhotos}>
+            <Pressable accessibilityLabel="Add photos" style={({ pressed }) => [styles.addPhotoButton, { opacity: pressed ? pressedOpacity : 1 }]} onPress={handleAddPhotos}>
               <Text style={styles.addPhotoButtonText}>+ Photos</Text>
             </Pressable>
           </View>
@@ -467,9 +464,10 @@ export default function MaintenanceNewScreen() {
             <View style={[styles.group, styles.column]}>
               <Text style={styles.label}>Next Service Date</Text>
               <Pressable
-                style={({ pressed }) => [styles.input, styles.dateButton, pressed && styles.buttonInteraction]}
+                style={({ pressed }) => [styles.input, styles.dateButton, { opacity: pressed ? pressedOpacity : 1 }]}
                 onPress={() => setActiveDatePicker('nextDate')}
                 accessibilityRole="button"
+                accessibilityLabel="Select next service date"
               >
                 <Text style={nextServiceDate ? styles.dateButtonText : styles.dateButtonPlaceholder}>
                   {nextServiceDate ? formatDisplayDate(nextServiceDate) : 'Select date'}
@@ -490,13 +488,13 @@ export default function MaintenanceNewScreen() {
                 <Text style={styles.sectionLabel}>Service Shop</Text>
               </View>
               <View style={styles.chipRow}>
-                <Pressable onPress={() => setSelectedShopId('')} style={({ pressed }) => [styles.chip, !selectedShopId && styles.chipActive, pressed && styles.buttonInteraction]}>
+                <Pressable accessibilityLabel="No shop" onPress={() => setSelectedShopId('')} style={({ pressed }) => [styles.chip, !selectedShopId && styles.chipActive, { opacity: pressed ? pressedOpacity : 1 }]}>
                   <Text style={[styles.chipText, !selectedShopId && styles.chipTextActive]}>None</Text>
                 </Pressable>
                 {shops.map((shop) => {
                   const active = selectedShopId === shop.provider_id;
                   return (
-                    <Pressable key={shop.provider_id} onPress={() => setSelectedShopId(shop.provider_id)} style={({ pressed }) => [styles.chip, active && styles.chipActive, pressed && styles.buttonInteraction]}>
+                    <Pressable key={shop.provider_id} accessibilityLabel={`Select ${shop.name}`} onPress={() => setSelectedShopId(shop.provider_id)} style={({ pressed }) => [styles.chip, active && styles.chipActive, { opacity: pressed ? pressedOpacity : 1 }]}>
                       <Text style={[styles.chipText, active && styles.chipTextActive]}>{shop.name}</Text>
                     </Pressable>
                   );
@@ -507,19 +505,8 @@ export default function MaintenanceNewScreen() {
 
           {/* Actions */}
           <View style={styles.actions}>
-            <Pressable accessibilityRole="button" style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonInteraction]} onPress={() => router.back()}>
-              <Text style={styles.secondaryButtonText}>Cancel</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonInteraction, saving && styles.buttonDisabled]} onPress={handleSave} disabled={saving}>
-              {saving ? (
-                <ActivityIndicator color={colors.background} />
-              ) : (
-                <View style={styles.saveRow}>
-                  <GearActionIcon size="sm" />
-                  <Text style={styles.primaryButtonText}>Save Record</Text>
-                </View>
-              )}
-            </Pressable>
+            <Button title="Cancel" onPress={() => router.back()} variant="secondary" />
+            <Button title="Save Record" onPress={handleSave} variant="primary" icon="checkmark" disabled={saving} loading={saving} accessibilityHint="Save the maintenance record" />
           </View>
         </View>
       </ScrollView>
@@ -529,7 +516,7 @@ export default function MaintenanceNewScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Choose a Template</Text>
-            <Pressable onPress={() => setShowTemplateModal(false)} style={({ pressed }) => [styles.modalCloseBtn, pressed && styles.buttonInteraction]}>
+            <Pressable onPress={() => setShowTemplateModal(false)} accessibilityLabel="Close" accessibilityRole="button" style={({ pressed }) => [styles.modalCloseBtn, { opacity: pressed ? pressedOpacity : 1 }]}>
               <Text style={styles.modalCloseBtnText}>✕</Text>
             </Pressable>
           </View>
@@ -542,15 +529,14 @@ export default function MaintenanceNewScreen() {
               return (
                 <Pressable
                   key={tpl.id}
-                  style={({ pressed }) => [styles.templateCard, pressed && styles.buttonInteraction]}
+                  accessibilityLabel={`Select ${tpl.title} template`}
+                  style={({ pressed }) => [styles.templateCard, { opacity: pressed ? pressedOpacity : 1 }]}
                   onPress={() => applyTemplate(tpl)}
                   accessibilityRole="button"
                 >
                   <View style={styles.templateCardHeader}>
                     <Text style={styles.templateCardTitle}>{tpl.title}</Text>
-                    <View style={[styles.typeBadge, { borderColor: tpl.type === 'repair' ? colors.warning : colors.brandAccent }]}>
-                      <Text style={[styles.typeBadgeText, { color: tpl.type === 'repair' ? colors.warning : colors.brandAccent }]}>{tpl.type}</Text>
-                    </View>
+                    <Badge label={tpl.type} variant={tpl.type === 'repair' ? 'warning' : 'info'} size="sm" />
                   </View>
                   <Text style={styles.templateCardDesc}>{tpl.description}</Text>
                   <View style={styles.templateCostRow}>
@@ -584,14 +570,15 @@ export default function MaintenanceNewScreen() {
       )}
       {Platform.OS === 'ios' && activeDatePicker !== null && (
         <Modal transparent animationType="slide" onRequestClose={() => setActiveDatePicker(null)}>
-          <View style={styles.pickerOverlay}>
+          <View style={styles.pickerOverlayWrapper}>
+            <OverlayBackdrop onDismiss={() => setActiveDatePicker(null)} />
             <View style={styles.pickerSheet}>
               <View style={styles.pickerToolbar}>
-                <Pressable onPress={() => setActiveDatePicker(null)}>
+                <Pressable accessibilityLabel="Cancel" onPress={() => setActiveDatePicker(null)}>
                   <Text style={styles.pickerCancel}>Cancel</Text>
                 </Pressable>
                 <Text style={styles.pickerTitle}>Select Date</Text>
-                <Pressable onPress={() => setActiveDatePicker(null)}>
+                <Pressable accessibilityLabel="Done" onPress={() => setActiveDatePicker(null)}>
                   <Text style={styles.pickerDone}>Done</Text>
                 </Pressable>
               </View>

@@ -31,18 +31,34 @@ import { uploadFile, STORAGE_BUCKETS } from '../../services/storage-service';
 import type { MaintenanceRecord } from '../../types/maintenance';
 import type { MileageLogEntry, Vehicle, VehicleStatus } from '../../types/vehicle';
 import { radii } from '../../theme/tokens';
-import { fontFamilies, typeScale } from '../../theme/typography';
+import { fontFamilies, typeScale, letterSpacings } from '../../theme/typography';
+import { sp, touchMinHeight, pressedOpacity } from '../../theme/spacing';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Button, Badge, OverlayBackdrop } from '../../components/ui';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<VehicleStatus, { label: string; color: string; bg: string }> = {
-  active:   { label: 'Active',    color: '#22C55E', bg: 'rgba(34,197,94,0.14)' },
-  stored:   { label: 'Stored',    color: '#4AA3FF', bg: 'rgba(74,163,255,0.14)' },
-  for_sale: { label: 'For Sale',  color: '#F59E0B', bg: 'rgba(245,158,11,0.14)' },
-  sold:     { label: 'Sold',      color: '#A6B4C3', bg: 'rgba(166,180,195,0.14)' },
-  totaled:  { label: 'Totaled',   color: '#EF4444', bg: 'rgba(239,68,68,0.14)' },
+const STATUS_LABELS: Record<VehicleStatus, string> = {
+  active: 'Active', stored: 'Stored', for_sale: 'For Sale', sold: 'Sold', totaled: 'Totaled',
 };
+
+const STATUS_BADGE_VARIANTS: Record<VehicleStatus, 'success' | 'warning' | 'danger' | 'info' | 'neutral'> = {
+  active: 'success',
+  stored: 'info',
+  for_sale: 'warning',
+  sold: 'neutral',
+  totaled: 'danger',
+};
+
+function getStatusColor(status: VehicleStatus, colors: ReturnType<typeof useTheme>['colors']): { color: string; bg: string } {
+  switch (status) {
+    case 'active': return { color: colors.success, bg: colors.successBannerBg };
+    case 'stored': return { color: colors.actionAccent, bg: colors.accentTint };
+    case 'for_sale': return { color: colors.warning, bg: colors.warningBannerBg };
+    case 'sold': return { color: colors.textSecondary, bg: colors.surfaceAlt };
+    case 'totaled': return { color: colors.danger, bg: colors.dangerBannerBg };
+  }
+}
 
 const ALL_STATUSES: VehicleStatus[] = ['active', 'stored', 'for_sale', 'sold', 'totaled'];
 
@@ -72,13 +88,12 @@ function calcAnnualMileage(logs: MileageLogEntry[]): string {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status?: VehicleStatus }) {
-  const { colors } = useTheme();
-  const styles = makeStyles(colors);
-  const cfg = STATUS_CONFIG[status || 'active'];
   return (
-    <View style={[styles.badge, { borderColor: cfg.color, backgroundColor: cfg.bg }]}>
-      <Text style={[styles.badgeText, { color: cfg.color }]}>{cfg.label}</Text>
-    </View>
+    <Badge
+      label={STATUS_LABELS[status || 'active']}
+      variant={STATUS_BADGE_VARIANTS[status || 'active']}
+      size="sm"
+    />
   );
 }
 
@@ -129,6 +144,7 @@ function FormField({
         placeholderTextColor={colors.textSecondary}
         keyboardType={keyboardType || 'default'}
         style={styles.fieldInput}
+        accessibilityLabel={label}
       />
     </View>
   );
@@ -336,17 +352,16 @@ export default function VehicleDetailScreen() {
     <AppShell routeKey="vehicle-detail" title={vehicleTitle} subtitle="Vehicle profile">
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {loading ? (
-          <ActivityIndicator size="large" color={colors.brandAccent} style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color={colors.brandAccent} style={styles.loadingIndicator} />
         ) : !vehicle ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>Vehicle not found</Text>
-            <Pressable
-              accessibilityRole="button"
+            <Button
+              variant="secondary"
+              title="Back to Garage"
               onPress={() => router.replace('/garage')}
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            >
-              <Text style={styles.secondaryButtonText}>Back to Garage</Text>
-            </Pressable>
+              accessibilityHint="Return to the garage list"
+            />
           </View>
         ) : (
           <>
@@ -354,6 +369,7 @@ export default function VehicleDetailScreen() {
             <View style={styles.heroCard}>
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="Upload vehicle photo"
                 onPress={handlePickPhoto}
                 style={styles.photoArea}
                 disabled={uploadingPhoto}
@@ -375,7 +391,7 @@ export default function VehicleDetailScreen() {
 
               <View style={styles.heroInfo}>
                 <View style={styles.heroTitleRow}>
-                  <View style={{ flex: 1 }}>
+                  <View style={styles.flex1}>
                     <Text style={styles.heroTitle}>
                       {vehicle.year} {vehicle.make} {vehicle.model}
                       {vehicle.trim ? ` ${vehicle.trim}` : ''}
@@ -386,6 +402,7 @@ export default function VehicleDetailScreen() {
                   </View>
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel={`Status: ${STATUS_LABELS[(vehicle.status as VehicleStatus) || 'active']}. Tap to change.`}
                     onPress={() => setStatusVisible(true)}
                     style={({ pressed }) => [pressed && styles.pressed]}
                   >
@@ -396,6 +413,7 @@ export default function VehicleDetailScreen() {
                 <View style={styles.heroActions}>
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel="AI Chat"
                     style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
                     onPress={() =>
                       router.push({
@@ -410,6 +428,7 @@ export default function VehicleDetailScreen() {
 
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel="Retrieve Manual"
                     style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
                     onPress={() =>
                       router.push({
@@ -430,6 +449,7 @@ export default function VehicleDetailScreen() {
 
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel="Edit Profile"
                     style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
                     onPress={openEdit}
                   >
@@ -439,6 +459,7 @@ export default function VehicleDetailScreen() {
 
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel="Log Maintenance"
                     style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
                     onPress={() => router.push('/maintenance/new')}
                   >
@@ -473,6 +494,7 @@ export default function VehicleDetailScreen() {
                 </View>
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel="Log odometer reading"
                   style={({ pressed }) => [styles.logMileageBtn, pressed && styles.pressed]}
                   onPress={() => {
                     setNewMileage(vehicle.current_mileage ? String(vehicle.current_mileage) : '');
@@ -537,7 +559,7 @@ export default function VehicleDetailScreen() {
               ) : (
                 records.map((record) => (
                   <View key={record.record_id} style={styles.maintenanceRow}>
-                    <View style={{ flex: 1 }}>
+                    <View style={styles.flex1}>
                       <Text style={styles.maintenanceTitle}>{record.title}</Text>
                       <Text style={styles.maintenanceMeta}>{record.type} · {record.date}</Text>
                     </View>
@@ -561,6 +583,7 @@ export default function VehicleDetailScreen() {
             <Text style={styles.modalTitle}>Edit Vehicle Profile</Text>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Close edit modal"
               onPress={() => setEditVisible(false)}
               style={({ pressed }) => [styles.modalCloseBtn, pressed && styles.pressed]}
             >
@@ -592,21 +615,21 @@ export default function VehicleDetailScreen() {
           </ScrollView>
 
           <View style={styles.modalFooter}>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+            <Button
+              variant="secondary"
+              title="Cancel"
               onPress={() => setEditVisible(false)}
-            >
-              <Text style={styles.secondaryButtonText}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.primaryButton, { flex: 1 }, saving && styles.buttonDisabled, pressed && styles.pressed]}
-              disabled={saving}
+              accessibilityHint="Close without saving"
+            />
+            <Button
+              variant="primary"
+              title="Save Changes"
               onPress={handleSaveEdit}
-            >
-              {saving ? <ActivityIndicator color={colors.background} /> : <Text style={styles.primaryButtonText}>Save Changes</Text>}
-            </Pressable>
+              loading={saving}
+              disabled={saving}
+              style={styles.flex1}
+              accessibilityHint="Save vehicle profile changes"
+            />
           </View>
         </View>
       </Modal>
@@ -620,6 +643,7 @@ export default function VehicleDetailScreen() {
             <Text style={styles.modalTitle}>Log Odometer Reading</Text>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Close mileage modal"
               onPress={() => setMileageVisible(false)}
               style={({ pressed }) => [styles.modalCloseBtn, pressed && styles.pressed]}
             >
@@ -634,21 +658,21 @@ export default function VehicleDetailScreen() {
           </View>
 
           <View style={styles.modalFooter}>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+            <Button
+              variant="secondary"
+              title="Cancel"
               onPress={() => setMileageVisible(false)}
-            >
-              <Text style={styles.secondaryButtonText}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.primaryButton, { flex: 1 }, loggingMileage && styles.buttonDisabled, pressed && styles.pressed]}
-              disabled={loggingMileage}
+              accessibilityHint="Close without saving"
+            />
+            <Button
+              variant="primary"
+              title="Save Reading"
               onPress={handleLogMileage}
-            >
-              {loggingMileage ? <ActivityIndicator color={colors.background} /> : <Text style={styles.primaryButtonText}>Save Reading</Text>}
-            </Pressable>
+              loading={loggingMileage}
+              disabled={loggingMileage}
+              style={styles.flex1}
+              accessibilityHint="Save odometer reading"
+            />
           </View>
         </View>
       </Modal>
@@ -657,16 +681,18 @@ export default function VehicleDetailScreen() {
           STATUS PICKER MODAL
       ═══════════════════════════════════════════════════════ */}
       <Modal visible={statusVisible} animationType="fade" transparent>
-        <Pressable style={styles.statusOverlay} onPress={() => setStatusVisible(false)}>
+        <View style={styles.statusOverlayRoot}>
+          <OverlayBackdrop onDismiss={() => setStatusVisible(false)} />
           <View style={styles.statusSheet}>
             <Text style={styles.statusSheetTitle}>Set Vehicle Status</Text>
             {ALL_STATUSES.map((s) => {
-              const cfg = STATUS_CONFIG[s];
+              const cfg = getStatusColor(s, colors);
               const current = (vehicle?.status || 'active') === s;
               return (
                 <Pressable
                   key={s}
                   accessibilityRole="button"
+                  accessibilityLabel={`Set status to ${STATUS_LABELS[s]}`}
                   onPress={() => handleSetStatus(s)}
                   style={({ pressed }) => [
                     styles.statusOption,
@@ -675,13 +701,13 @@ export default function VehicleDetailScreen() {
                   ]}
                 >
                   <View style={[styles.statusDot, { backgroundColor: cfg.color }]} />
-                  <Text style={[styles.statusOptionText, current && { color: cfg.color }]}>{cfg.label}</Text>
-                  {current && <Ionicons name="checkmark" size={16} color={cfg.color} style={{ marginLeft: 'auto' }} />}
+                  <Text style={[styles.statusOptionText, current && { color: cfg.color }]}>{STATUS_LABELS[s]}</Text>
+                  {current && <Ionicons name="checkmark" size={16} color={cfg.color} style={{ marginLeft: 'auto' as const }} />}
                 </Pressable>
               );
             })}
           </View>
-        </Pressable>
+        </View>
       </Modal>
     </AppShell>
   );
@@ -692,12 +718,15 @@ export default function VehicleDetailScreen() {
 function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
   scroll: { flex: 1 },
-  content: { padding: 16, gap: 14 },
+  content: { padding: sp[4], gap: sp[3] },
+
+  loadingIndicator: { marginTop: sp[10] },
+  flex1: { flex: 1 },
 
   emptyState: {
     minHeight: 220, borderRadius: radii.lg, borderWidth: 1,
     borderColor: colors.border, backgroundColor: colors.surface,
-    justifyContent: 'center', alignItems: 'center', gap: 12, padding: 14,
+    justifyContent: 'center', alignItems: 'center', gap: sp[3], padding: sp[3],
   },
   emptyTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.lg },
   emptyText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
@@ -711,57 +740,50 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   heroImage: { width: '100%', height: '100%' },
   photoPlaceholder: {
     flex: 1, backgroundColor: colors.surfaceAlt,
-    justifyContent: 'center', alignItems: 'center', gap: 6,
+    justifyContent: 'center', alignItems: 'center', gap: sp[2],
   },
   photoPlaceholderText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   photoOverlay: {
-    ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(11,17,23,0.6)',
+    ...StyleSheet.absoluteFillObject, backgroundColor: colors.modalOverlay,
     justifyContent: 'center', alignItems: 'center',
   },
-  heroInfo: { padding: 14, gap: 12 },
-  heroTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  heroInfo: { padding: sp[3], gap: sp[3] },
+  heroTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: sp[3] },
   heroTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.xl },
   heroNickname: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.sm, marginTop: 2 },
-  heroActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-
-  // Status badge
-  badge: {
-    borderWidth: 1, borderRadius: radii.full,
-    paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start',
-  },
-  badgeText: { fontFamily: fontFamilies.heading, fontSize: typeScale.xs },
+  heroActions: { flexDirection: 'row', flexWrap: 'wrap', gap: sp[2] },
 
   // Section card
   sectionCard: {
     borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border,
-    backgroundColor: colors.surface, padding: 14, gap: 10,
+    backgroundColor: colors.surface, padding: sp[3], gap: sp[3],
   },
   sectionTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
 
   // Info grid
-  infoGrid: { gap: 6 },
+  infoGrid: { gap: sp[2] },
   infoRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: colors.border,
+    paddingVertical: sp[2], borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   infoLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  infoValue: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, textAlign: 'right', flex: 1, marginLeft: 8 },
+  infoValue: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, textAlign: 'right', flex: 1, marginLeft: sp[2] },
 
   // Mileage section
   mileageHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   mileageCurrent: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.xxl },
   mileageSubtext: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 2 },
   logMileageBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
+    flexDirection: 'row', alignItems: 'center', gap: sp[1],
     borderWidth: 1, borderColor: colors.brandAccent, borderRadius: radii.md,
-    paddingHorizontal: 12, paddingVertical: 8,
-    backgroundColor: 'rgba(51,214,210,0.10)',
+    paddingHorizontal: sp[3], paddingVertical: sp[2],
+    backgroundColor: colors.accentTint,
   },
   logMileageBtnText: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-  mileageList: { gap: 6, marginTop: 4 },
+  mileageList: { gap: sp[2], marginTop: sp[1] },
   mileageRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border,
+    flexDirection: 'row', alignItems: 'center', gap: sp[2],
+    paddingVertical: sp[2], borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   mileageRowValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
   mileageRowDate: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
@@ -769,77 +791,78 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
 
   // Maintenance section
   maintenanceRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    flexDirection: 'row', alignItems: 'center', gap: sp[3],
     borderWidth: 1, borderColor: colors.border, borderRadius: radii.md,
-    backgroundColor: colors.surfaceAlt, paddingHorizontal: 12, paddingVertical: 10,
+    backgroundColor: colors.surfaceAlt, paddingHorizontal: sp[3], paddingVertical: sp[3],
   },
   maintenanceTitle: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  maintenanceMeta: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 3 },
+  maintenanceMeta: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: sp[1] },
   maintenanceCost: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
 
   // Buttons
   primaryButton: {
-    minHeight: 44, borderRadius: radii.md, backgroundColor: colors.brandAccent,
-    paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center',
-    flexDirection: 'row', gap: 8,
+    minHeight: touchMinHeight, borderRadius: radii.md, backgroundColor: colors.brandAccent,
+    paddingHorizontal: sp[3], justifyContent: 'center', alignItems: 'center',
+    flexDirection: 'row', gap: sp[2],
   },
   primaryButtonText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
   secondaryButton: {
-    minHeight: 44, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border,
+    minHeight: touchMinHeight, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surfaceAlt, justifyContent: 'center', alignItems: 'center',
-    paddingHorizontal: 14, flexDirection: 'row', gap: 6,
+    paddingHorizontal: sp[3], flexDirection: 'row', gap: sp[2],
   },
   secondaryButtonText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
   buttonDisabled: { opacity: 0.6 },
-  pressed: { opacity: 0.88 },
+  pressed: { opacity: pressedOpacity },
 
   // Modal
   modalRoot: { flex: 1, backgroundColor: colors.background },
   modalHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14,
+    paddingHorizontal: sp[4], paddingVertical: sp[3],
     borderBottomWidth: 1, borderBottomColor: colors.border,
     backgroundColor: colors.surface,
   },
   modalTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.lg },
-  modalCloseBtn: { padding: 6 },
+  modalCloseBtn: { padding: sp[2] },
   modalScroll: { flex: 1 },
-  modalContent: { padding: 16, gap: 10 },
+  modalContent: { padding: sp[4], gap: sp[3] },
   modalSection: {
     color: colors.textSecondary, fontFamily: fontFamilies.heading,
-    fontSize: typeScale.xs, letterSpacing: 0.8, textTransform: 'uppercase',
-    marginTop: 8, marginBottom: 2,
+    fontSize: typeScale.xs, letterSpacing: letterSpacings.wider, textTransform: 'uppercase',
+    marginTop: sp[2], marginBottom: 2,
   },
   modalFooter: {
-    flexDirection: 'row', gap: 10, padding: 16,
+    flexDirection: 'row', gap: sp[3], padding: sp[4],
     borderTopWidth: 1, borderTopColor: colors.border,
     backgroundColor: colors.surface,
   },
 
   // Form fields
-  fieldGroup: { gap: 5 },
+  fieldGroup: { gap: sp[1] },
   fieldLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   fieldInput: {
-    minHeight: 44, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md,
-    backgroundColor: colors.surfaceAlt, paddingHorizontal: 12,
+    minHeight: touchMinHeight, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md,
+    backgroundColor: colors.surfaceAlt, paddingHorizontal: sp[3],
     color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm,
   },
 
   // Status sheet
-  statusOverlay: {
-    flex: 1, backgroundColor: colors.overlay,
+  statusOverlayRoot: {
+    flex: 1,
     justifyContent: 'flex-end',
   },
   statusSheet: {
+    zIndex: 1,
     backgroundColor: colors.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl,
     borderWidth: 1, borderColor: colors.border,
-    padding: 20, gap: 10,
+    padding: sp[5], gap: sp[3],
   },
-  statusSheetTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md, marginBottom: 4 },
+  statusSheetTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md, marginBottom: sp[1] },
   statusOption: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    minHeight: 48, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt, paddingHorizontal: 14,
+    flexDirection: 'row', alignItems: 'center', gap: sp[3],
+    minHeight: sp[12], borderRadius: radii.md, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt, paddingHorizontal: sp[3],
   },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   statusOptionText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },

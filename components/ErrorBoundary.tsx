@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
 
 interface Props {
   children: ReactNode;
@@ -87,20 +88,7 @@ class ErrorBoundary extends Component<Props, State> {
 
             <TouchableOpacity 
               style={[styles.button, styles.secondaryButton]} 
-              onPress={() => {
-                // Navigate to home or reload app
-                // For React Native, this should use navigation
-                // For web, this uses window.location
-                try {
-                  if (typeof window !== 'undefined' && window.location) {
-                    window.location.href = '/';
-                  }
-                } catch (error) {
-                  // In React Native environment, window may not exist
-                  // App should provide navigation prop for proper navigation
-                  console.warn('Navigation not available in this environment');
-                }
-              }}
+              onPress={() => router.replace('/')}
             >
               <Text style={[styles.buttonText, styles.secondaryButtonText]}>
                 Go to Home

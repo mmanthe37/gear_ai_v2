@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { radii } from '../theme/tokens';
+import { sp, pressedOpacity } from '../theme/spacing';
 import { fontFamilies, typeScale } from '../theme/typography';
 
 interface CalendarPickerProps {
@@ -79,7 +80,7 @@ export default function CalendarPicker({ visible, value, onChange, onClose }: Ca
       borderRadius: radii.xl,
       borderWidth: 1,
       borderColor: colors.border,
-      padding: 16,
+      padding: sp[4],
       width: 308,
       gap: 6,
     },
@@ -87,7 +88,7 @@ export default function CalendarPicker({ visible, value, onChange, onClose }: Ca
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 8,
+      marginBottom: sp[2],
     },
     navBtn: {
       width: 36,
@@ -111,7 +112,7 @@ export default function CalendarPicker({ visible, value, onChange, onClose }: Ca
       fontFamily: fontFamilies.body,
       fontSize: 11,
       textTransform: 'uppercase',
-      paddingVertical: 4,
+      paddingVertical: sp[1],
     },
     dayCell: {
       width: 40,
@@ -129,9 +130,9 @@ export default function CalendarPicker({ visible, value, onChange, onClose }: Ca
     },
     dayTextSelected: { color: colors.background, fontFamily: fontFamilies.heading },
     dayTextToday: { color: colors.brandAccent },
-    cancelRow: { marginTop: 8, alignSelf: 'center', padding: 8 },
+    cancelRow: { marginTop: sp[2], alignSelf: 'center', padding: sp[2] },
     cancelText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-    pressed: { opacity: 0.7 },
+    pressed: { opacity: pressedOpacity },
   });
 
   return (
@@ -140,11 +141,11 @@ export default function CalendarPicker({ visible, value, onChange, onClose }: Ca
         <View style={styles.card}>
           {/* Month navigation */}
           <View style={styles.header}>
-            <Pressable onPress={prevMonth} style={({ pressed }) => [styles.navBtn, pressed && styles.pressed]}>
+            <Pressable onPress={prevMonth} style={({ pressed }) => [styles.navBtn, pressed && styles.pressed]} accessibilityLabel="Previous month">
               <Text style={styles.navBtnText}>‹</Text>
             </Pressable>
             <Text style={styles.monthYear}>{MONTH_NAMES[viewMonth]} {viewYear}</Text>
-            <Pressable onPress={nextMonth} style={({ pressed }) => [styles.navBtn, pressed && styles.pressed]}>
+            <Pressable onPress={nextMonth} style={({ pressed }) => [styles.navBtn, pressed && styles.pressed]} accessibilityLabel="Next month">
               <Text style={styles.navBtnText}>›</Text>
             </Pressable>
           </View>
@@ -183,7 +184,7 @@ export default function CalendarPicker({ visible, value, onChange, onClose }: Ca
             </View>
           ))}
 
-          <Pressable onPress={onClose} style={({ pressed }) => [styles.cancelRow, pressed && styles.pressed]}>
+          <Pressable onPress={onClose} style={({ pressed }) => [styles.cancelRow, pressed && styles.pressed]} accessibilityLabel="Cancel date selection">
             <Text style={styles.cancelText}>Cancel</Text>
           </Pressable>
         </View>

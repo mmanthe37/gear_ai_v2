@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   Pressable,
@@ -46,8 +47,9 @@ import LiveDataGrid from '../../components/diagnostics/LiveDataGrid';
 import SymptomCheckerPanel from '../../components/diagnostics/SymptomCheckerPanel';
 import RecallAlertsPanel from '../../components/diagnostics/RecallAlertsPanel';
 import DTCCodeCard from '../../components/diagnostics/DTCCodeCard';
-import { radii } from '../../theme/tokens';
-import { fontFamilies, typeScale } from '../../theme/typography';
+import { sp, touchMinHeight, pressedOpacity } from '../../theme/spacing';
+import { typeScale, fontFamilies, fontWeights, letterSpacings } from '../../theme/typography';
+import { elevation, radii } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 
 type Tab = 'overview' | 'codes' | 'live' | 'symptoms' | 'recalls';
@@ -71,6 +73,7 @@ export default function DiagnosticsScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   // Codes tab
@@ -99,6 +102,7 @@ export default function DiagnosticsScreen() {
 
   const loadVehicles = useCallback(async () => {
     if (!user?.user_id) return;
+    setLoadError(null);
     try {
       const rows = await getUserVehicles(user.user_id);
       setVehicles(rows);
@@ -107,6 +111,7 @@ export default function DiagnosticsScreen() {
       }
     } catch (err) {
       console.warn('[Diagnostics] loadVehicles error:', err);
+      setLoadError((err as Error)?.message || 'Failed to load vehicles.');
     }
   }, [user?.user_id]);
 
@@ -367,10 +372,11 @@ export default function DiagnosticsScreen() {
           {vehicles.map((v) => (
             <Pressable
               key={v.vehicle_id}
+              accessibilityLabel={`Select ${v.year} ${v.make} ${v.model}`}
               style={({ pressed }) => [
                 styles.vehiclePill,
                 selectedVehicle?.vehicle_id === v.vehicle_id && styles.vehiclePillActive,
-                pressed && { opacity: 0.8 },
+                pressed && styles.pressedState,
               ]}
               onPress={() => setSelectedVehicle(v)}
             >
@@ -403,7 +409,8 @@ export default function DiagnosticsScreen() {
           return (
             <Pressable
               key={t.key}
-              style={({ pressed }) => [styles.tabBtn, isActive && styles.tabBtnActive, pressed && { opacity: 0.8 }]}
+              accessibilityLabel={`${t.label} tab`}
+              style={({ pressed }) => [styles.tabBtn, isActive && styles.tabBtnActive, pressed && styles.pressedState]}
               onPress={() => setTab(t.key)}
             >
               <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{t.label}</Text>
@@ -423,8 +430,20 @@ export default function DiagnosticsScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brandAccent} />}
       >
+        {loadError && (
+              <View style={styles.errorBanner}>
+                <Ionicons name="alert-circle-outline" size={22} color={colors.danger} />
+                <View style={styles.errorBannerBody}>
+                  <Text style={styles.errorBannerTitle}>Failed to load</Text>
+                  <Text style={styles.errorBannerSub}>{loadError}</Text>
+                </View>
+                <Pressable onPress={loadVehicles} accessibilityLabel="Retry loading vehicles" style={styles.errorBannerRetry}>
+                  <Ionicons name="refresh-outline" size={20} color={colors.brandAccent} />
+                </Pressable>
+              </View>
+            )}
         {!selectedVehicle ? (
-          <EmptyVehicleState />
+          !loadError ? <EmptyVehicleState /> : null
         ) : (
           <>
             {tab === 'overview' && (
@@ -461,7 +480,7 @@ export default function DiagnosticsScreen() {
               />
             )}
             {tab === 'symptoms' && (
-              <View style={{ gap: 0 }}>
+              <View style={styles.symptomWrapper}>
                 <SymptomCheckerPanel onSubmit={handleSymptomCheck} />
               </View>
             )}
@@ -512,7 +531,7 @@ function OverviewTab({ vehicle, healthScore, healthLoading, activeCodes, unackno
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const severityColor: Record<string, string> = {
-    critical: '#DC2626',
+    critical: colors.danger,
     high: colors.danger,
     medium: colors.warning,
     low: colors.success,
@@ -548,7 +567,7 @@ function OverviewTab({ vehicle, healthScore, healthLoading, activeCodes, unackno
             <Text style={styles.emptyText}>No health score calculated yet.</Text>
           </View>
         )}
-        <Pressable style={({ pressed }) => [styles.outlineBtn, pressed && { opacity: 0.8 }]} onPress={onRecalcHealth}>
+        <Pressable accessibilityLabel="Recalculate health score" style={({ pressed }) => [styles.outlineBtn, pressed && styles.pressedState]} onPress={onRecalcHealth}>
           <View style={styles.outlineBtnContent}>
             <GearActionIcon size="sm" />
             <Text style={styles.outlineBtnText}>Recalculate Score</Text>
@@ -573,7 +592,7 @@ function OverviewTab({ vehicle, healthScore, healthLoading, activeCodes, unackno
             )}
           </View>
         )}
-        <Pressable style={({ pressed }) => [styles.outlineBtn, pressed && { opacity: 0.8 }]} onPress={() => onGoToTab('codes')}>
+        <Pressable accessibilityLabel="View all trouble codes" style={({ pressed }) => [styles.outlineBtn, pressed && styles.pressedState]} onPress={() => onGoToTab('codes')}>
           <View style={styles.outlineBtnContent}>
             <GearActionIcon size="sm" />
             <Text style={styles.outlineBtnText}>View All Codes</Text>
@@ -584,11 +603,12 @@ function OverviewTab({ vehicle, healthScore, healthLoading, activeCodes, unackno
       {/* Recalls summary */}
       {unacknowledgedRecalls > 0 && (
         <Pressable
-          style={({ pressed }) => [styles.recallBanner, pressed && { opacity: 0.9 }]}
+          accessibilityLabel={`${unacknowledgedRecalls} open recalls, tap to view`}
+          style={({ pressed }) => [styles.recallBanner, pressed && styles.pressedState]}
           onPress={() => onGoToTab('recalls')}
         >
           <Text style={styles.recallBannerIcon}>⚠</Text>
-          <View style={{ flex: 1 }}>
+          <View style={styles.recallBannerContent}>
             <Text style={styles.recallBannerTitle}>{unacknowledgedRecalls} Open Recall{unacknowledgedRecalls > 1 ? 's' : ''}</Text>
             <Text style={styles.recallBannerSub}>Tap to view recall details and remedy instructions →</Text>
           </View>
@@ -611,7 +631,7 @@ function QuickActionBtn({ label, icon, onPress }: { label: string; icon: string;
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   return (
-    <Pressable style={({ pressed }) => [styles.quickBtn, pressed && { opacity: 0.8 }]} onPress={onPress}>
+    <Pressable accessibilityLabel={label} style={({ pressed }) => [styles.quickBtn, pressed && styles.pressedState]} onPress={onPress}>
       <Text style={styles.quickIcon}>{icon}</Text>
       <Text style={styles.quickLabel}>{label}</Text>
     </Pressable>
@@ -660,14 +680,16 @@ function CodesTab({ codes, filter, loading, obdConnected, vehicleName, onFilterC
       {obdConnected && (
         <View style={styles.obdActions}>
           <Pressable
-            style={({ pressed }) => [styles.obdBtn, pressed && { opacity: 0.8 }]}
+            accessibilityLabel="Read diagnostic trouble codes"
+            style={({ pressed }) => [styles.obdBtn, pressed && styles.pressedState]}
             onPress={async () => { setReading(true); await onReadCodes(); setReading(false); }}
             disabled={reading}
           >
             {reading ? <ActivityIndicator color="#000" size="small" /> : <Text style={styles.obdBtnText}>Read Codes</Text>}
           </Pressable>
           <Pressable
-            style={({ pressed }) => [styles.obdBtn, styles.obdBtnOutline, pressed && { opacity: 0.8 }]}
+            accessibilityLabel="Clear diagnostic trouble codes"
+            style={({ pressed }) => [styles.obdBtn, styles.obdBtnOutline, pressed && styles.pressedState]}
             onPress={async () => { setClearing(true); await onClearCodes(); setClearing(false); }}
             disabled={clearing}
           >
@@ -681,7 +703,8 @@ function CodesTab({ codes, filter, loading, obdConnected, vehicleName, onFilterC
         {(['active', 'all', 'resolved'] as const).map((f) => (
           <Pressable
             key={f}
-            style={({ pressed }) => [styles.filterBtn, filter === f && styles.filterBtnActive, pressed && { opacity: 0.8 }]}
+            accessibilityLabel={`Filter ${f} codes`}
+            style={({ pressed }) => [styles.filterBtn, filter === f && styles.filterBtnActive, pressed && styles.pressedState]}
             onPress={() => onFilterChange(f)}
           >
             <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
@@ -762,10 +785,11 @@ function LiveDataTab({ obdState, liveData, scanning, onConnect }: LiveDataTabPro
             </View>
           </View>
           <Pressable
+            accessibilityLabel={obdState.status === 'connected' ? 'Disconnect OBD adapter' : 'Connect OBD adapter'}
             style={({ pressed }) => [
               styles.connectBtn,
               obdState.status === 'connected' && styles.connectBtnActive,
-              pressed && { opacity: 0.85 },
+              pressed && styles.pressedState,
             ]}
             onPress={onConnect}
             disabled={scanning}
@@ -815,54 +839,75 @@ function SectionCard({ title, children }: { title: string; children: React.React
 function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
   scroll: { flex: 1 },
-  content: { padding: 16, gap: 12 },
-  sectionGap: { gap: 12 },
+  content: { padding: sp[4], gap: sp[3] },
+  sectionGap: { gap: sp[3] },
+  pressedState: { opacity: pressedOpacity },
 
   // Vehicle picker
   vehiclePickerScroll: { maxHeight: 52, borderBottomWidth: 1, borderBottomColor: colors.border },
-  vehiclePickerContent: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  vehiclePickerContent: { paddingHorizontal: sp[4], paddingVertical: sp[3], gap: sp[2] },
   vehiclePill: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.full,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: sp[4],
+    paddingVertical: sp[2],
     backgroundColor: colors.surfaceAlt,
   },
-  vehiclePillActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51,214,210,0.12)' },
+  vehiclePillActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
   vehiclePillText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   vehiclePillTextActive: { color: colors.textPrimary },
   singleVehicle: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: sp[4],
+    paddingVertical: sp[2],
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: sp[2],
   },
   singleVehicleText: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
   singleVehicleMeta: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
 
   // Tab bar
   tabBarScroll: { maxHeight: 52, borderBottomWidth: 1, borderBottomColor: colors.border },
-  tabBarContent: { paddingHorizontal: 16, paddingVertical: 8, gap: 6, flexDirection: 'row', alignItems: 'center' },
+  tabBarContent: { paddingHorizontal: sp[4], paddingVertical: sp[2], gap: sp[2], flexDirection: 'row', alignItems: 'center' },
   tabBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    gap: sp[1],
+    paddingHorizontal: sp[4],
+    paddingVertical: sp[2],
     borderRadius: radii.full,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
   },
-  tabBtnActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51,214,210,0.12)' },
+  tabBtnActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
   tabText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   tabTextActive: { color: colors.textPrimary },
-  tabBadge: { backgroundColor: colors.danger, borderRadius: radii.full, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  tabBadgeText: { color: '#fff', fontFamily: fontFamilies.heading, fontSize: 9 },
+  tabBadge: { backgroundColor: colors.danger, borderRadius: radii.full, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: sp[1] },
+  tabBadgeText: { color: '#fff', fontFamily: fontFamilies.heading, fontSize: typeScale.xs },
+
+  // Error banner (extracted from inline styles)
+  errorBanner: {
+    margin: sp[4],
+    padding: sp[4],
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.danger + '40',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: sp[3],
+  },
+  errorBannerBody: { flex: 1 },
+  errorBannerTitle: { color: colors.danger, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
+  errorBannerSub: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 2 },
+  errorBannerRetry: { padding: sp[2] },
+
+  // Symptom wrapper
+  symptomWrapper: { gap: sp[0] },
 
   // Cards
   card: {
@@ -876,85 +921,86 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     color: colors.textPrimary,
     fontFamily: fontFamilies.heading,
     fontSize: typeScale.sm,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: sp[4],
+    paddingVertical: sp[3],
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  cardBody: { padding: 14, gap: 12 },
+  cardBody: { padding: sp[4], gap: sp[3] },
 
   // Empty states
-  emptyState: { alignItems: 'center', paddingVertical: 24, gap: 8 },
+  emptyState: { alignItems: 'center', paddingVertical: sp[6], gap: sp[2] },
   emptyTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.lg },
   emptySub: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, textAlign: 'center' },
   emptyText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
   greenOk: { color: colors.success, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  centeredPad: { paddingVertical: 24, alignItems: 'center', justifyContent: 'center' },
+  centeredPad: { paddingVertical: sp[6], alignItems: 'center', justifyContent: 'center' },
 
   // Health score layout
-  healthScoreLayout: { flexDirection: 'row', gap: 16, alignItems: 'flex-start' },
-  healthSystems: { flex: 1, gap: 6 },
-  systemRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  systemLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: 11, width: 72 },
+  healthScoreLayout: { flexDirection: 'row', gap: sp[4], alignItems: 'flex-start' },
+  healthSystems: { flex: 1, gap: sp[2] },
+  systemRow: { flexDirection: 'row', alignItems: 'center', gap: sp[2] },
+  systemLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, width: 72 },
   systemBarBg: { flex: 1, height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden' },
   systemBar: { height: 6, borderRadius: 3 },
-  systemScore: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: 11, width: 24, textAlign: 'right' },
+  systemScore: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.xs, width: 24, textAlign: 'right' },
 
   // Buttons
-  outlineBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, minHeight: 38, alignItems: 'center', justifyContent: 'center' },
-  outlineBtnContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  outlineBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, minHeight: touchMinHeight, alignItems: 'center', justifyContent: 'center' },
+  outlineBtnContent: { flexDirection: 'row', alignItems: 'center', gap: sp[2] },
   outlineBtnText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
 
   // Recall banner
   recallBanner: {
-    backgroundColor: 'rgba(239,68,68,0.1)',
+    backgroundColor: colors.dangerBannerBg,
     borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.35)',
+    borderColor: colors.danger,
     borderRadius: radii.lg,
-    padding: 14,
+    padding: sp[4],
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: sp[3],
   },
-  recallBannerIcon: { fontSize: 22, color: colors.danger },
+  recallBannerIcon: { fontSize: typeScale.xl, color: colors.danger },
+  recallBannerContent: { flex: 1 },
   recallBannerTitle: { color: colors.danger, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
   recallBannerSub: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 2 },
 
   // Quick actions
-  quickActions: { flexDirection: 'row', gap: 8 },
-  quickBtn: { flex: 1, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, alignItems: 'center', paddingVertical: 12, gap: 4 },
-  quickIcon: { fontSize: 22 },
+  quickActions: { flexDirection: 'row', gap: sp[2] },
+  quickBtn: { flex: 1, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, alignItems: 'center', paddingVertical: sp[3], gap: sp[1] },
+  quickIcon: { fontSize: typeScale.xl },
   quickLabel: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textAlign: 'center' },
 
   // Codes summary
-  codesSummary: { gap: 8 },
-  summaryCodeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  codesSummary: { gap: sp[2] },
+  summaryCodeRow: { flexDirection: 'row', alignItems: 'center', gap: sp[3] },
   summaryCode: { fontFamily: fontFamilies.heading, fontSize: typeScale.sm, width: 60 },
   summaryCodeDesc: { flex: 1, color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   moreText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
 
   // Filter bar
-  filterRow: { flexDirection: 'row', gap: 8 },
-  filterBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, paddingHorizontal: 14, paddingVertical: 6, backgroundColor: colors.surfaceAlt },
-  filterBtnActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51,214,210,0.12)' },
+  filterRow: { flexDirection: 'row', gap: sp[2] },
+  filterBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, paddingHorizontal: sp[4], paddingVertical: sp[2], backgroundColor: colors.surfaceAlt },
+  filterBtnActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
   filterText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   filterTextActive: { color: colors.textPrimary },
 
   // OBD actions
-  obdActions: { flexDirection: 'row', gap: 8 },
-  obdBtn: { flex: 1, backgroundColor: colors.brandAccent, borderRadius: radii.md, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
+  obdActions: { flexDirection: 'row', gap: sp[2] },
+  obdBtn: { flex: 1, backgroundColor: colors.brandAccent, borderRadius: radii.md, minHeight: touchMinHeight, alignItems: 'center', justifyContent: 'center' },
   obdBtnOutline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.danger },
   obdBtnText: { color: '#000', fontFamily: fontFamilies.heading, fontSize: typeScale.xs },
 
   // OBD connect panel
-  obdConnectRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  obdStatus: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  obdConnectRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: sp[3] },
+  obdStatus: { flexDirection: 'row', alignItems: 'center', gap: sp[3], flex: 1 },
   statusDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
   obdStatusTitle: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
   obdStatusSub: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 1 },
-  connectBtn: { backgroundColor: colors.brandAccent, borderRadius: radii.md, paddingHorizontal: 16, paddingVertical: 8 },
+  connectBtn: { backgroundColor: colors.brandAccent, borderRadius: radii.md, paddingHorizontal: sp[4], paddingVertical: sp[2] },
   connectBtnActive: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.danger },
   connectBtnText: { color: '#000', fontFamily: fontFamilies.heading, fontSize: typeScale.xs },
-  obdHint: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, lineHeight: 18 },
+  obdHint: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, lineHeight: typeScale.lg },
 });
 }

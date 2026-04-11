@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { radii } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import { sp } from '../../theme/spacing';
 import type { LiveOBDData, OBDSessionState } from '../../types/diagnostic';
 
 interface Props {
@@ -51,7 +52,7 @@ export default function LiveDataGrid({ sessionState, data }: Props) {
     grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 8,
+      gap: sp[2],
     },
     cell: {
       width: '47%',
@@ -59,7 +60,7 @@ export default function LiveDataGrid({ sessionState, data }: Props) {
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radii.md,
-      paddingHorizontal: 12,
+      paddingHorizontal: sp[3],
       paddingVertical: 10,
       gap: 2,
     },
@@ -81,8 +82,8 @@ export default function LiveDataGrid({ sessionState, data }: Props) {
       minHeight: 120,
       justifyContent: 'center',
       alignItems: 'center',
-      gap: 8,
-      padding: 16,
+      gap: sp[2],
+      padding: sp[4],
     },
     stateText: {
       color: colors.textSecondary,

@@ -23,7 +23,7 @@ export interface VehicleLookup {
 
 export interface ManualRetrievalResult {
   /** Where the manual URL was sourced from */
-  source: 'vehicledatabases' | 'nhtsa_cache' | 'web_search' | 'oem_fallback' | 'cache' | 'ai_discovered';
+  source: ManualSourceType;
   vehicle: VehicleLookup;
   manual_url: string | null;
   manual_title?: string;
@@ -33,6 +33,43 @@ export interface ManualRetrievalResult {
   retrieved_at: string;
   cached: boolean;
   error?: string;
+}
+
+export type ManualSourceType =
+  | 'vehicledatabases'
+  | 'nhtsa_cache'
+  | 'web_search'
+  | 'oem_fallback'
+  | 'oem_direct'
+  | 'oem_portal_crawl'
+  | 'aggregator'
+  | 'ai_research'
+  | 'ai_discovered'
+  | 'indexed_manual'
+  | 'cache';
+
+/** Discovery strategy used to find a manual */
+export type ManualDiscoveryStrategy =
+  | 'oem_direct'
+  | 'oem_portal_crawl'
+  | 'search_engine'
+  | 'aggregator'
+  | 'ai_research';
+
+/** Provenance record for a discovered manual source */
+export interface ManualSourceRecord {
+  source_id: string;
+  vehicle_year: number;
+  vehicle_make: string;
+  vehicle_model: string;
+  source_type: ManualDiscoveryStrategy;
+  source_url: string;
+  canonical_pdf_url: string;
+  verified: boolean;
+  last_verified_at: string;
+  failure_count: number;
+  reliability_score: number;
+  created_at: string;
 }
 
 export interface VehicleDatabasesResponse {
@@ -182,7 +219,7 @@ export interface CachedManualLookup {
   cache_key: string;
   vehicle: VehicleLookup;
   manual_url: string;
-  source: ManualRetrievalResult['source'];
+  source: ManualSourceType;
   created_at: string;
   expires_at: string;
 }

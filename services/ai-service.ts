@@ -32,7 +32,7 @@ import {
 } from './manual-retrieval';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
-import { getModelById, getDefaultModel, getProviderConfig, type AIProvider } from '../types/models';
+import { getModelById, getDefaultModel, getProviderConfig, AVAILABLE_MODELS, type AIProvider } from '../types/models';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -159,19 +159,10 @@ function buildRecallContext(
 export async function generateAIResponse(
   request: AIRequest
 ): Promise<AIResponse> {
-  const useProxy = Platform.OS === 'web';
-  const apiKey =
+  const openaiApiKey =
     process.env.EXPO_PUBLIC_OPENAI_API_KEY ||
     Constants.expoConfig?.extra?.openaiApiKey ||
     process.env.OPENAI_API_KEY;
-
-  // On native platforms, an API key is required for direct OpenAI calls
-  if (!useProxy && !apiKey) {
-    console.error(
-      '[AI Service] No OpenAI API key found. Set EXPO_PUBLIC_OPENAI_API_KEY or OPENAI_API_KEY. Returning offline template.'
-    );
-    return generateTemplateResponse(request, true);
-  }
 
   let ragSources: RAGSource[] = [];
   let recallContext = '';
@@ -238,14 +229,25 @@ export async function generateAIResponse(
     // Resolve model: user-selected → image-specific → default
     const selectedModel = request.model_id ? getModelById(request.model_id) : undefined;
     const imageModel = request.attachment?.type === 'image' ? getModelById('gpt-4o') : undefined;
-    const resolvedModel = selectedModel || imageModel || getDefaultModel();
+    const hasImage = request.attachment?.type === 'image';
+
+    // If user selected a model that doesn't support images but sent an image,
+    // fall back to an image-capable model from the same provider (or GPT-4o).
+    let resolvedModel = selectedModel || imageModel || getDefaultModel();
+    if (hasImage && !resolvedModel.supportsImages) {
+      const sameProviderImageModel = AVAILABLE_MODELS.find(
+        (m) => m.provider === resolvedModel.provider && m.supportsImages
+      );
+      resolvedModel = sameProviderImageModel || imageModel || getModelById('gpt-4o') || getDefaultModel();
+    }
+
     const modelId = resolvedModel.modelId;
     const provider = resolvedModel.provider;
 
     // Build user message — plain text or multimodal with image
-    const userContent: any = request.attachment?.type === 'image'
+    const userContent: any = hasImage
       ? [
-          { type: 'image_url', image_url: { url: request.attachment.data_uri, detail: 'high' } },
+          { type: 'image_url', image_url: { url: request.attachment!.data_uri, detail: 'high' } },
           { type: 'text', text: request.message },
         ]
       : request.message;
@@ -261,11 +263,32 @@ export async function generateAIResponse(
       provider, // tells the proxy which provider API to call
     };
 
-    // On web, use the server-side proxy to avoid CORS; on native, call OpenAI directly
-    const url = useProxy ? PROXY_PATH : OPENAI_CHAT_URL;
+    // Route to the correct endpoint based on platform and provider:
+    //   Web  → relative /api/chat proxy (same-origin, avoids CORS)
+    //   Native + openai + key → call OpenAI directly
+    //   Native + any other provider → absolute proxy URL (requires EXPO_PUBLIC_API_BASE_URL)
+    let url: string;
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (!useProxy && apiKey) {
-      headers['Authorization'] = `Bearer ${apiKey}`;
+
+    if (Platform.OS === 'web') {
+      url = PROXY_PATH;
+    } else if (provider === 'openai' && openaiApiKey) {
+      url = OPENAI_CHAT_URL;
+      headers['Authorization'] = `Bearer ${openaiApiKey}`;
+    } else {
+      // Non-OpenAI provider on native: route through server-side proxy
+      const apiBase =
+        process.env.EXPO_PUBLIC_API_BASE_URL ||
+        (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ||
+        '';
+      if (!apiBase) {
+        console.warn(
+          '[AI Service] EXPO_PUBLIC_API_BASE_URL is not set. ' +
+          'Non-OpenAI providers require the server proxy on native. ' +
+          'Set it to your Vercel deployment URL (e.g. https://my-app.vercel.app).'
+        );
+      }
+      url = `${apiBase}${PROXY_PATH}`;
     }
 
     const res = await fetch(url, {

@@ -43,20 +43,18 @@ import type {
   MaintenanceInterval,
 } from '../../types/maintenance';
 import type { Vehicle } from '../../types/vehicle';
-import { radii } from '../../theme/tokens';
-import { fontFamilies, typeScale } from '../../theme/typography';
+import { sp, touchMinHeight, pressedOpacity } from '../../theme/spacing';
+import { typeScale, fontFamilies, fontWeights, letterSpacings } from '../../theme/typography';
+import { elevation, radii } from '../../theme/tokens';
+import { Button, Badge, ErrorBanner, OverlayBackdrop } from '../../components/ui';
 import { useTheme } from '../../contexts/ThemeContext';
 
 // ---------------------------------------------------------------------------
 // Severity helpers
 // ---------------------------------------------------------------------------
 
-const SEVERITY_OVERDUE = '#EF4444';
-const SEVERITY_DUE_SOON = '#F59E0B';
-const SEVERITY_UPCOMING = '#10B981';
-
-function getReminderSeverityColor(reminder: ServiceReminder, currentMileage?: number): string {
-  if (reminder.status === 'overdue') return SEVERITY_OVERDUE;
+function getReminderSeverityColor(reminder: ServiceReminder, currentMileage: number | undefined, colors: ReturnType<typeof useTheme>['colors']): string {
+  if (reminder.status === 'overdue') return colors.danger;
   const now = new Date();
   const dueDateMs = reminder.due_date ? new Date(reminder.due_date).getTime() : null;
   const daysUntilDue = dueDateMs ? (dueDateMs - now.getTime()) / (1000 * 60 * 60 * 24) : null;
@@ -67,15 +65,15 @@ function getReminderSeverityColor(reminder: ServiceReminder, currentMileage?: nu
     (daysUntilDue !== null && daysUntilDue < 0) ||
     (milesUntilDue !== null && milesUntilDue < 0)
   ) {
-    return SEVERITY_OVERDUE;
+    return colors.danger;
   }
   if (
     (daysUntilDue !== null && daysUntilDue <= 30) ||
     (milesUntilDue !== null && milesUntilDue <= 500)
   ) {
-    return SEVERITY_DUE_SOON;
+    return colors.warning;
   }
-  return SEVERITY_UPCOMING;
+  return colors.success;
 }
 
 function formatDate(iso: string): string {
@@ -118,6 +116,7 @@ export default function MaintenanceScreen() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Data
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
@@ -166,6 +165,7 @@ export default function MaintenanceScreen() {
 
   const loadData = useCallback(async () => {
     if (!user?.user_id) return;
+    setLoadError(null);
     setLoading(true);
     try {
       const [recordRows, vehicleRows] = await Promise.all([
@@ -195,6 +195,7 @@ export default function MaintenanceScreen() {
       }
     } catch (error) {
       console.warn('Could not load maintenance data:', error);
+      setLoadError((error as Error)?.message || 'Failed to load maintenance data.');
     } finally {
       setLoading(false);
     }
@@ -335,8 +336,8 @@ export default function MaintenanceScreen() {
   // ---------------------------------------------------------------------------
 
   const overdueReminders = useMemo(
-    () => reminders.filter((r) => getReminderSeverityColor(r, selectedVehicle?.current_mileage) === SEVERITY_OVERDUE),
-    [reminders, selectedVehicle]
+    () => reminders.filter((r) => getReminderSeverityColor(r, selectedVehicle?.current_mileage, colors) === colors.danger),
+    [reminders, selectedVehicle, colors]
   );
 
   const upcomingReminders = useMemo(
@@ -365,6 +366,30 @@ export default function MaintenanceScreen() {
     return Math.max(...last6.map((m) => m.total), 1);
   }, [analytics]);
 
+  const totalCostFromRecords = useMemo(
+    () => records.reduce((sum, r) => {
+      const cost = r.cost ?? ((r.parts_cost || 0) + (r.labor_cost || 0));
+      return sum + (cost || 0);
+    }, 0),
+    [records]
+  );
+
+  const nextServiceDate = useMemo(() => {
+    const today = new Date();
+    const futureDates = records
+      .filter((r) => r.next_service_date && new Date(r.next_service_date) > today)
+      .map((r) => new Date(r.next_service_date!))
+      .sort((a, b) => a.getTime() - b.getTime());
+    return futureDates[0] ?? null;
+  }, [records]);
+
+  const overdueFromRecords = useMemo(() => {
+    const today = new Date();
+    return records.filter(
+      (r) => r.next_service_date && new Date(r.next_service_date) < today
+    ).length;
+  }, [records]);
+
   // ---------------------------------------------------------------------------
   // Render tabs
   // ---------------------------------------------------------------------------
@@ -373,12 +398,19 @@ export default function MaintenanceScreen() {
     <View style={styles.tabContent}>
       {/* Stats row */}
       <View style={styles.statsRow}>
-        {[
-          { label: 'Records', value: String(records.length) },
-          { label: 'Total Spent', value: analytics ? formatCurrency(analytics.total_lifetime) : '--' },
-          { label: 'Cost/Mile', value: analytics ? `$${analytics.cost_per_mile.toFixed(3)}` : '--' },
-          { label: 'Overdue', value: String(overdueReminders.length), color: overdueReminders.length > 0 ? SEVERITY_OVERDUE : colors.textPrimary },
-        ].map((stat) => (
+        {(() => {
+          const overdueCount = Math.max(overdueReminders.length, overdueFromRecords);
+          const totalSpent = analytics ? analytics.total_lifetime : totalCostFromRecords;
+          const nextSvc = nextServiceDate
+            ? nextServiceDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            : '--';
+          return [
+            { label: 'Records', value: String(records.length) },
+            { label: 'Total Spent', value: formatCurrency(totalSpent) },
+            { label: 'Next Service', value: nextSvc },
+            { label: 'Overdue', value: String(overdueCount), color: overdueCount > 0 ? colors.danger : colors.textPrimary },
+          ];
+        })().map((stat) => (
           <View key={stat.label} style={styles.statCard}>
             <Text style={[styles.statValue, stat.color ? { color: stat.color } : undefined]}>{stat.value}</Text>
             <Text style={styles.statLabel}>{stat.label}</Text>
@@ -391,9 +423,11 @@ export default function MaintenanceScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Upcoming Services</Text>
           <Pressable
-            style={({ pressed }) => [styles.aiButton, pressed && styles.buttonInteraction]}
+            style={({ pressed }) => [styles.aiButton, { opacity: pressed ? pressedOpacity : 1 }]}
             onPress={handleGenerateAISchedule}
             disabled={aiLoading || !selectedVehicleId}
+            accessibilityLabel="Generate AI schedule"
+            accessibilityRole="button"
           >
             {aiLoading ? (
               <ActivityIndicator size="small" color={colors.background} />
@@ -409,7 +443,7 @@ export default function MaintenanceScreen() {
           <Text style={styles.emptyText}>No upcoming reminders. Tap AI Schedule to generate one.</Text>
         ) : (
           upcomingReminders.map((r) => {
-            const severityColor = getReminderSeverityColor(r, selectedVehicle?.current_mileage);
+            const severityColor = getReminderSeverityColor(r, selectedVehicle?.current_mileage, colors);
             return (
               <View key={r.reminder_id} style={[styles.reminderRow, { borderLeftColor: severityColor }]}>
                 <View style={{ flex: 1 }}>
@@ -437,8 +471,10 @@ export default function MaintenanceScreen() {
           records.slice(0, 3).map((record) => (
             <Pressable
               key={record.record_id}
-              style={({ pressed }) => [styles.recordRow, pressed && styles.buttonInteraction]}
+              style={({ pressed }) => [styles.recordRow, { opacity: pressed ? pressedOpacity : 1 }]}
               onPress={() => router.push(`/maintenance/${record.record_id}` as any)}
+              accessibilityLabel={`View record: ${record.title}`}
+              accessibilityRole="button"
             >
               <View style={{ flex: 1 }}>
                 <Text style={styles.recordTitle}>{record.title}</Text>
@@ -449,8 +485,10 @@ export default function MaintenanceScreen() {
           ))
         )}
         <Pressable
-          style={({ pressed }) => [styles.linkButton, pressed && styles.buttonInteraction]}
+          style={({ pressed }) => [styles.linkButton, { opacity: pressed ? pressedOpacity : 1 }]}
           onPress={() => router.push('/maintenance/new')}
+          accessibilityLabel="New record"
+          accessibilityRole="button"
         >
           <GearActionIcon size="sm" />
           <Text style={styles.linkButtonText}>New Record</Text>
@@ -468,9 +506,11 @@ export default function MaintenanceScreen() {
             style={({ pressed }) => [
               styles.pill,
               selectedVehicleId === v.vehicle_id && styles.pillActive,
-              pressed && styles.buttonInteraction,
+              { opacity: pressed ? pressedOpacity : 1 },
             ]}
             onPress={() => handleVehicleSelect(v.vehicle_id)}
+            accessibilityLabel={`Select ${v.year} ${v.make} ${v.model}`}
+            accessibilityRole="button"
           >
             <Text style={[styles.pillText, selectedVehicleId === v.vehicle_id && styles.pillTextActive]}>
               {v.year} {v.make} {v.model}
@@ -483,9 +523,11 @@ export default function MaintenanceScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Service Reminders</Text>
           <Pressable
-            style={({ pressed }) => [styles.aiButton, pressed && styles.buttonInteraction]}
+            style={({ pressed }) => [styles.aiButton, { opacity: pressed ? pressedOpacity : 1 }]}
             onPress={handleGenerateAISchedule}
             disabled={aiLoading || !selectedVehicleId}
+            accessibilityLabel="Generate AI schedule"
+            accessibilityRole="button"
           >
             {aiLoading
               ? <ActivityIndicator size="small" color={colors.background} />
@@ -502,7 +544,7 @@ export default function MaintenanceScreen() {
           <Text style={styles.emptyText}>No reminders for this vehicle.</Text>
         ) : (
           reminders.map((r) => {
-            const severityColor = getReminderSeverityColor(r, selectedVehicle?.current_mileage);
+            const severityColor = getReminderSeverityColor(r, selectedVehicle?.current_mileage, colors);
             return (
               <View key={r.reminder_id} style={[styles.reminderRow, { borderLeftColor: severityColor }]}>
                 <View style={{ flex: 1 }}>
@@ -519,11 +561,13 @@ export default function MaintenanceScreen() {
                     <Text style={[styles.severityText, { color: severityColor }]}>{r.priority}</Text>
                   </View>
                   <Pressable
-                    style={({ pressed }) => [styles.iconButton, pressed && styles.buttonInteraction]}
+                    style={({ pressed }) => [styles.iconButton, { opacity: pressed ? pressedOpacity : 1 }]}
                     onPress={async () => {
                       await updateServiceReminderStatus(r.reminder_id, 'dismissed').catch(() => null);
                       setReminders((prev) => prev.filter((x) => x.reminder_id !== r.reminder_id));
                     }}
+                    accessibilityLabel="Dismiss reminder"
+                    accessibilityRole="button"
                   >
                     <Text style={styles.iconButtonText}>✕</Text>
                   </Pressable>
@@ -545,9 +589,11 @@ export default function MaintenanceScreen() {
             style={({ pressed }) => [
               styles.filterButton,
               recordFilter === f && styles.filterButtonActive,
-              pressed && styles.buttonInteraction,
+              { opacity: pressed ? pressedOpacity : 1 },
             ]}
             onPress={() => setRecordFilter(f)}
+            accessibilityLabel={`Filter by ${f}`}
+            accessibilityRole="button"
           >
             <Text style={[styles.filterText, recordFilter === f && styles.filterTextActive]}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -565,12 +611,14 @@ export default function MaintenanceScreen() {
         ) : (
           filteredRecords.map((record) => {
             const hasOverdueNext = record.next_service_date && new Date(record.next_service_date) < new Date();
-            const leftColor = hasOverdueNext ? SEVERITY_OVERDUE : colors.border;
+            const leftColor = hasOverdueNext ? colors.danger : colors.border;
             return (
               <Pressable
                 key={record.record_id}
-                style={({ pressed }) => [styles.recordCard, { borderLeftColor: leftColor }, pressed && styles.buttonInteraction]}
+                style={({ pressed }) => [styles.recordCard, { borderLeftColor: leftColor }, { opacity: pressed ? pressedOpacity : 1 }]}
                 onPress={() => router.push(`/maintenance/${record.record_id}` as any)}
+                accessibilityLabel={`View record: ${record.title}`}
+                accessibilityRole="button"
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.recordTitle}>{record.title}</Text>
@@ -594,7 +642,7 @@ export default function MaintenanceScreen() {
 
   const renderCosts = () => {
     const a = analytics;
-    if (!a) return <ActivityIndicator color={colors.brandAccent} style={{ marginTop: 20 }} />;
+    if (!a) return <ActivityIndicator color={colors.brandAccent} style={{ marginTop: sp[5] }} />;
     const last6 = a.by_month.slice(-6);
     const maxCatValue = Math.max(...a.by_category.map((c) => c.total), 1);
     const budgetAmount = budget?.amount || 0;
@@ -691,9 +739,11 @@ export default function MaintenanceScreen() {
             style={({ pressed }) => [
               styles.pill,
               selectedVehicleId === v.vehicle_id && styles.pillActive,
-              pressed && styles.buttonInteraction,
+              { opacity: pressed ? pressedOpacity : 1 },
             ]}
             onPress={() => handleVehicleSelect(v.vehicle_id)}
+            accessibilityLabel={`Select ${v.year} ${v.make} ${v.model}`}
+            accessibilityRole="button"
           >
             <Text style={[styles.pillText, selectedVehicleId === v.vehicle_id && styles.pillTextActive]}>
               {v.year} {v.make} {v.model}
@@ -705,8 +755,10 @@ export default function MaintenanceScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Installed Parts</Text>
           <Pressable
-            style={({ pressed }) => [styles.addButton, pressed && styles.buttonInteraction]}
+            style={({ pressed }) => [styles.addButton, { opacity: pressed ? pressedOpacity : 1 }]}
             onPress={() => setShowAddPart(true)}
+            accessibilityLabel="Add part"
+            accessibilityRole="button"
           >
             <Text style={styles.addButtonText}>+ Add Part</Text>
           </Pressable>
@@ -730,11 +782,13 @@ export default function MaintenanceScreen() {
                     ) : null}
                   </View>
                   <Pressable
-                    style={({ pressed }) => [styles.iconButton, pressed && styles.buttonInteraction]}
+                    style={({ pressed }) => [styles.iconButton, { opacity: pressed ? pressedOpacity : 1 }]}
                     onPress={async () => {
                       await deleteInstalledPart(p.part_id).catch(() => null);
                       setParts((prev) => prev.filter((x) => x.part_id !== p.part_id));
                     }}
+                    accessibilityLabel="Delete"
+                    accessibilityRole="button"
                   >
                     <Text style={styles.iconButtonText}>✕</Text>
                   </Pressable>
@@ -753,8 +807,10 @@ export default function MaintenanceScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Service Providers</Text>
           <Pressable
-            style={({ pressed }) => [styles.addButton, pressed && styles.buttonInteraction]}
+            style={({ pressed }) => [styles.addButton, { opacity: pressed ? pressedOpacity : 1 }]}
             onPress={() => setShowAddShop(true)}
+            accessibilityLabel="Add shop"
+            accessibilityRole="button"
           >
             <Text style={styles.addButtonText}>+ Add Shop</Text>
           </Pressable>
@@ -778,11 +834,13 @@ export default function MaintenanceScreen() {
                 {shop.notes ? <Text style={styles.shopNotes}>{shop.notes}</Text> : null}
               </View>
               <Pressable
-                style={({ pressed }) => [styles.iconButton, pressed && styles.buttonInteraction]}
+                style={({ pressed }) => [styles.iconButton, { opacity: pressed ? pressedOpacity : 1 }]}
                 onPress={async () => {
                   await deleteServiceProvider(shop.provider_id).catch(() => null);
                   setShops((prev) => prev.filter((x) => x.provider_id !== shop.provider_id));
                 }}
+                accessibilityLabel="Delete"
+                accessibilityRole="button"
               >
                 <Text style={styles.iconButtonText}>✕</Text>
               </Pressable>
@@ -808,9 +866,11 @@ export default function MaintenanceScreen() {
             style={({ pressed }) => [
               styles.tabButton,
               activeTab === tab.key && styles.tabButtonActive,
-              pressed && styles.buttonInteraction,
+              { opacity: pressed ? pressedOpacity : 1 },
             ]}
             onPress={() => setActiveTab(tab.key)}
+            accessibilityLabel={tab.label}
+            accessibilityRole="button"
           >
             <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>{tab.label}</Text>
           </Pressable>
@@ -818,8 +878,11 @@ export default function MaintenanceScreen() {
       </ScrollView>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        {loadError && (
+          <ErrorBanner message={loadError} variant="error" onDismiss={loadData} style={{ margin: sp[4] }} />
+        )}
         {loading ? (
-          <ActivityIndicator size="large" color={colors.brandAccent} style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color={colors.brandAccent} style={{ marginTop: sp[10] }} />
         ) : (
           <>
             {activeTab === 'dashboard' && renderDashboard()}
@@ -834,7 +897,8 @@ export default function MaintenanceScreen() {
 
       {/* Add Part Modal */}
       <Modal visible={showAddPart} transparent animationType="fade" onRequestClose={() => setShowAddPart(false)}>
-        <View style={styles.modalOverlay}>
+        <View style={styles.modalWrapper}>
+          <OverlayBackdrop onDismiss={() => setShowAddPart(false)} />
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Add Installed Part</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -859,8 +923,10 @@ export default function MaintenanceScreen() {
                     {PART_CATEGORIES.map((cat) => (
                       <Pressable
                         key={cat}
-                        style={({ pressed }) => [styles.chip, partCategory === cat && styles.chipActive, pressed && styles.buttonInteraction]}
+                        style={({ pressed }) => [styles.chip, partCategory === cat && styles.chipActive, { opacity: pressed ? pressedOpacity : 1 }]}
                         onPress={() => setPartCategory(cat)}
+                        accessibilityLabel={cat.replace(/_/g, ' ')}
+                        accessibilityRole="button"
                       >
                         <Text style={[styles.chipText, partCategory === cat && styles.chipTextActive]}>{cat.replace(/_/g, ' ')}</Text>
                       </Pressable>
@@ -884,10 +950,10 @@ export default function MaintenanceScreen() {
               </View>
             </ScrollView>
             <View style={styles.modalActions}>
-              <Pressable style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonInteraction]} onPress={() => setShowAddPart(false)}>
+              <Pressable style={({ pressed }) => [styles.secondaryButton, { opacity: pressed ? pressedOpacity : 1 }]} onPress={() => setShowAddPart(false)} accessibilityLabel="Cancel" accessibilityRole="button">
                 <Text style={styles.secondaryButtonText}>Cancel</Text>
               </Pressable>
-              <Pressable style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonInteraction]} onPress={handleAddPart} disabled={partSaving}>
+              <Pressable style={({ pressed }) => [styles.primaryButton, { opacity: pressed ? pressedOpacity : 1 }]} onPress={handleAddPart} disabled={partSaving} accessibilityLabel="Save part" accessibilityRole="button">
                 {partSaving ? <ActivityIndicator color={colors.background} /> : <Text style={styles.primaryButtonText}>Save Part</Text>}
               </Pressable>
             </View>
@@ -897,7 +963,8 @@ export default function MaintenanceScreen() {
 
       {/* Add Shop Modal */}
       <Modal visible={showAddShop} transparent animationType="fade" onRequestClose={() => setShowAddShop(false)}>
-        <View style={styles.modalOverlay}>
+        <View style={styles.modalWrapper}>
+          <OverlayBackdrop onDismiss={() => setShowAddShop(false)} />
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Add Service Shop</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -929,10 +996,10 @@ export default function MaintenanceScreen() {
               </View>
             </ScrollView>
             <View style={styles.modalActions}>
-              <Pressable style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonInteraction]} onPress={() => setShowAddShop(false)}>
+              <Pressable style={({ pressed }) => [styles.secondaryButton, { opacity: pressed ? pressedOpacity : 1 }]} onPress={() => setShowAddShop(false)} accessibilityLabel="Cancel" accessibilityRole="button">
                 <Text style={styles.secondaryButtonText}>Cancel</Text>
               </Pressable>
-              <Pressable style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonInteraction]} onPress={handleAddShop} disabled={shopSaving}>
+              <Pressable style={({ pressed }) => [styles.primaryButton, { opacity: pressed ? pressedOpacity : 1 }]} onPress={handleAddShop} disabled={shopSaving} accessibilityLabel="Save shop" accessibilityRole="button">
                 {shopSaving ? <ActivityIndicator color={colors.background} /> : <Text style={styles.primaryButtonText}>Save Shop</Text>}
               </Pressable>
             </View>
@@ -950,21 +1017,21 @@ export default function MaintenanceScreen() {
 function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
   tabBar: { borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface, maxHeight: 52 },
-  tabBarContent: { paddingHorizontal: 12, gap: 4, alignItems: 'center', height: 52 },
+  tabBarContent: { paddingHorizontal: sp[3], gap: sp[1], alignItems: 'center', height: 52 },
   tabButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: sp[3],
+    paddingVertical: sp[2],
     borderRadius: radii.full,
     minHeight: 36,
     justifyContent: 'center',
   },
-  tabButtonActive: { backgroundColor: 'rgba(51, 214, 210, 0.14)', borderWidth: 1, borderColor: colors.brandAccent },
+  tabButtonActive: { backgroundColor: colors.accentTint, borderWidth: 1, borderColor: colors.brandAccent },
   tabText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  tabTextActive: { color: colors.brandAccent, fontFamily: fontFamilies.heading },
+  tabTextActive: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontWeight: fontWeights.bold },
   scroll: { flex: 1 },
-  scrollContent: { padding: 16, gap: 12, paddingBottom: 40 },
-  tabContent: { gap: 12 },
-  statsRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
+  scrollContent: { padding: sp[4], gap: sp[3], paddingBottom: sp[10] },
+  tabContent: { gap: sp[3] },
+  statsRow: { flexDirection: 'row', gap: sp[2], flexWrap: 'wrap' },
   statCard: {
     flex: 1,
     minWidth: 80,
@@ -972,102 +1039,102 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     borderColor: colors.border,
     borderRadius: radii.md,
     backgroundColor: colors.surface,
-    padding: 12,
+    padding: sp[3],
     alignItems: 'center',
   },
-  statValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
-  statLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 4, textAlign: 'center' },
+  statValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md, fontWeight: fontWeights.bold },
+  statLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: sp[1], textAlign: 'center', fontWeight: fontWeights.medium },
   card: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.lg,
     backgroundColor: colors.surface,
-    padding: 14,
-    gap: 10,
+    padding: sp[4],
+    gap: sp[2],
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
-  emptyText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, textAlign: 'center', paddingVertical: 12 },
-  emptyState: { minHeight: 160, justifyContent: 'center', alignItems: 'center', gap: 8 },
+  cardTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md, fontWeight: fontWeights.bold },
+  emptyText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, textAlign: 'center', paddingVertical: sp[3] },
+  emptyState: { minHeight: 160, justifyContent: 'center', alignItems: 'center', gap: sp[2] },
   emptyTitle: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.md },
   emptySubtitle: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, textAlign: 'center' },
   reminderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: sp[2],
     borderLeftWidth: 3,
-    paddingLeft: 10,
-    paddingVertical: 6,
+    paddingLeft: sp[2],
+    paddingVertical: sp[2],
   },
   reminderTitle: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
   reminderMeta: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 2 },
-  reminderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  severityBadge: { borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 3 },
+  reminderActions: { flexDirection: 'row', alignItems: 'center', gap: sp[2] },
+  severityBadge: { borderRadius: radii.full, paddingHorizontal: sp[2], paddingVertical: sp[1] },
   severityText: { fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'capitalize' },
   recordRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 8,
+    gap: sp[2],
+    paddingVertical: sp[2],
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
   recordCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: sp[2],
     borderWidth: 1,
     borderColor: colors.border,
     borderLeftWidth: 3,
     borderRadius: radii.md,
     backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: sp[3],
+    paddingVertical: sp[2],
   },
   recordTitle: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
   recordMeta: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 2 },
-  recordDesc: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 4 },
-  recordSide: { alignItems: 'flex-end', gap: 4 },
+  recordDesc: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: sp[1] },
+  recordSide: { alignItems: 'flex-end', gap: sp[1] },
   recordTypeLabel: { color: colors.actionAccent, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase' },
-  recordCost: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-  linkButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border },
+  recordCost: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm, fontWeight: fontWeights.bold },
+  linkButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: sp[2], paddingVertical: sp[2], borderTopWidth: 1, borderTopColor: colors.border },
   linkButtonText: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  filterRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  filterButton: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, backgroundColor: colors.surface, paddingHorizontal: 14, justifyContent: 'center' },
-  filterButtonActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51, 214, 210, 0.14)' },
+  filterRow: { flexDirection: 'row', gap: sp[2], flexWrap: 'wrap' },
+  filterButton: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, backgroundColor: colors.surface, paddingHorizontal: sp[3], justifyContent: 'center' },
+  filterButtonActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
   filterText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
   filterTextActive: { color: colors.textPrimary },
-  vehiclePills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, backgroundColor: colors.surface, paddingHorizontal: 14, justifyContent: 'center' },
-  pillActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51, 214, 210, 0.14)' },
+  vehiclePills: { flexDirection: 'row', flexWrap: 'wrap', gap: sp[2] },
+  pill: { minHeight: 36, borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, backgroundColor: colors.surface, paddingHorizontal: sp[3], justifyContent: 'center' },
+  pillActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
   pillText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   pillTextActive: { color: colors.textPrimary },
-  aiButton: { minHeight: 34, borderRadius: radii.md, backgroundColor: colors.brandAccent, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center' },
-  aiButtonContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  aiButtonText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.xs },
-  addButton: { minHeight: 34, borderRadius: radii.md, borderWidth: 1, borderColor: colors.brandAccent, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center' },
+  aiButton: { minHeight: 34, borderRadius: radii.md, backgroundColor: colors.brandAccent, paddingHorizontal: sp[3], justifyContent: 'center', alignItems: 'center' },
+  aiButtonContent: { flexDirection: 'row', alignItems: 'center', gap: sp[1] },
+  aiButtonText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.xs, fontWeight: fontWeights.bold },
+  addButton: { minHeight: 34, borderRadius: radii.md, borderWidth: 1, borderColor: colors.brandAccent, paddingHorizontal: sp[3], justifyContent: 'center', alignItems: 'center' },
   addButtonText: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-  sectionLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: 1, marginTop: 8, marginBottom: 4 },
-  partRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, borderTopWidth: 1, borderTopColor: colors.border },
+  sectionLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textTransform: 'uppercase', letterSpacing: letterSpacings.widest, marginTop: sp[2], marginBottom: sp[1], fontWeight: fontWeights.medium },
+  partRow: { flexDirection: 'row', alignItems: 'center', gap: sp[2], paddingVertical: sp[2], borderTopWidth: 1, borderTopColor: colors.border },
   partName: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
   partMeta: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 2 },
   partWarranty: { color: colors.success, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 2 },
-  shopCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
-  shopHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  shopName: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
+  shopCard: { flexDirection: 'row', alignItems: 'flex-start', gap: sp[2], paddingVertical: sp[2], borderTopWidth: 1, borderTopColor: colors.border },
+  shopHeader: { flexDirection: 'row', alignItems: 'center', gap: sp[2], flexWrap: 'wrap' },
+  shopName: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm, fontWeight: fontWeights.bold },
   preferredBadge: { color: colors.warning, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   shopMeta: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 2 },
-  shopNotes: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 4, fontStyle: 'italic' },
-  iconButton: { padding: 6, borderRadius: radii.sm, backgroundColor: colors.surfaceAlt },
+  shopNotes: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: sp[1], fontStyle: 'italic' },
+  iconButton: { padding: sp[1], borderRadius: radii.sm, backgroundColor: colors.surfaceAlt },
   iconButtonText: { color: colors.textSecondary, fontSize: typeScale.xs },
   // Bar chart
-  barChart: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingTop: 8, minHeight: 160 },
-  barColumn: { flex: 1, alignItems: 'center', gap: 4 },
+  barChart: { flexDirection: 'row', alignItems: 'flex-end', gap: sp[2], paddingTop: sp[2], minHeight: 160 },
+  barColumn: { flex: 1, alignItems: 'center', gap: sp[1] },
   bar: { width: '80%', backgroundColor: colors.brandAccent, borderRadius: radii.sm },
   barValue: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: 10, textAlign: 'center' },
   barLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-  categoryRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  categoryLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, width: 80 },
+  categoryRow: { flexDirection: 'row', alignItems: 'center', gap: sp[2] },
+  categoryLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, width: 80, fontWeight: fontWeights.medium },
   categoryBarTrack: { flex: 1, height: 8, backgroundColor: colors.surfaceAlt, borderRadius: radii.full, overflow: 'hidden' },
   categoryBar: { height: '100%', backgroundColor: colors.actionAccent, borderRadius: radii.full },
   categoryValue: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, width: 64, textAlign: 'right' },
@@ -1077,34 +1144,33 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   budgetBarAlert: { backgroundColor: colors.danger },
   budgetAlert: { color: colors.danger, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', alignItems: 'center', padding: 16 },
-  modalContent: { width: '100%', maxWidth: 500, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl, padding: 20, gap: 14, maxHeight: '80%' },
-  modalTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.lg },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 },
-  formGroup: { gap: 6 },
-  formRow: { flexDirection: 'row', gap: 10 },
-  label: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+  modalWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: sp[4] },
+  modalContent: { width: '100%', maxWidth: 500, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl, padding: sp[5], gap: sp[3], maxHeight: '80%' },
+  modalTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.lg, fontWeight: fontWeights.bold },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: sp[2], marginTop: sp[2] },
+  formGroup: { gap: sp[1] },
+  formRow: { flexDirection: 'row', gap: sp[2] },
+  label: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, fontWeight: fontWeights.medium },
   input: {
-    minHeight: 44,
+    minHeight: touchMinHeight,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.md,
     backgroundColor: colors.surfaceAlt,
     color: colors.textPrimary,
-    paddingHorizontal: 12,
+    paddingHorizontal: sp[3],
     fontFamily: fontFamilies.body,
     fontSize: typeScale.sm,
   },
-  notesInput: { minHeight: 80, textAlignVertical: 'top', paddingTop: 10 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { minHeight: 30, borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, backgroundColor: colors.surfaceAlt, paddingHorizontal: 10, justifyContent: 'center', alignItems: 'center' },
-  chipActive: { borderColor: colors.brandAccent, backgroundColor: 'rgba(51, 214, 210, 0.14)' },
+  notesInput: { minHeight: 80, textAlignVertical: 'top', paddingTop: sp[2] },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: sp[1] },
+  chip: { minHeight: 30, borderWidth: 1, borderColor: colors.border, borderRadius: radii.full, backgroundColor: colors.surfaceAlt, paddingHorizontal: sp[2], justifyContent: 'center', alignItems: 'center' },
+  chipActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
   chipText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   chipTextActive: { color: colors.textPrimary },
-  primaryButton: { minHeight: 44, borderRadius: radii.md, backgroundColor: colors.brandAccent, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
-  primaryButtonText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-  secondaryButton: { minHeight: 44, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
+  primaryButton: { minHeight: touchMinHeight, borderRadius: radii.md, backgroundColor: colors.brandAccent, paddingHorizontal: sp[4], justifyContent: 'center', alignItems: 'center' },
+  primaryButtonText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm, fontWeight: fontWeights.bold },
+  secondaryButton: { minHeight: touchMinHeight, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, paddingHorizontal: sp[4], justifyContent: 'center', alignItems: 'center' },
   secondaryButtonText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  buttonInteraction: { opacity: 0.88 },
 });
 }

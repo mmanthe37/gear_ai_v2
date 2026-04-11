@@ -19,6 +19,16 @@ import {
   HealthSystem,
 } from '../types';
 
+// Shared domain layer – offline DTC parsing & safety classification
+import {
+  parseDTCCode,
+  isSafetyCritical,
+  getSafetyEscalation,
+} from '../lib/automotive';
+
+// Re-export shared DTC utilities for app-wide access
+export { parseDTCCode, isSafetyCritical, getSafetyEscalation };
+
 const OPENAI_CHAT_URL = 'https://api.openai.com/v1/chat/completions';
 const DIAG_MODEL = 'gpt-4.1-mini';
 
@@ -67,6 +77,16 @@ export async function analyzeDTC(
 ): Promise<DTCAnalysis> {
   const localInfo = getCommonDTCInfo(code);
   const base = getMockDTCAnalysis(code);
+
+  // Enrich base with shared-layer offline DTC parsing
+  const dtcInfo = parseDTCCode(code);
+  if (dtcInfo.system !== 'Unknown') {
+    base.description = base.description || dtcInfo.description;
+  }
+  if (dtcInfo.safetyEscalation) {
+    base.urgency = 'critical';
+    base.safety_escalation = dtcInfo.safetyEscalation;
+  }
 
   const apiKey = getApiKey();
   if (!apiKey) return base;
@@ -159,11 +179,11 @@ export function getCommonDTCInfo(code: string): Partial<DTCAnalysis> | null {
 
 function getMockDTCAnalysis(code: string): DTCAnalysis {
   const baseInfo = getCommonDTCInfo(code);
-  const prefix = code[0]?.toUpperCase();
-  const isSerious = ['P0300', 'P0301', 'P0302', 'P0303', 'P0304'].includes(code);
+  const dtcInfo = parseDTCCode(code);
+  const isSerious = isSafetyCritical(code) || ['P0300', 'P0301', 'P0302', 'P0303', 'P0304'].includes(code);
   return {
     code,
-    description: baseInfo?.description || `Diagnostic Trouble Code: ${code}`,
+    description: baseInfo?.description || dtcInfo.description || `Diagnostic Trouble Code: ${code}`,
     urgency: isSerious ? 'high' : 'medium',
     estimated_cost_min: 150,
     estimated_cost_max: 1200,
@@ -172,7 +192,8 @@ function getMockDTCAnalysis(code: string): DTCAnalysis {
     tech_service_bulletins: [],
     common_causes: baseInfo?.common_causes || ['Professional diagnosis recommended'],
     symptoms: baseInfo?.symptoms || ['Check engine light illuminated'],
-    repair_difficulty: prefix === 'P' ? 'moderate' : 'professional',
+    repair_difficulty: dtcInfo.system === 'Powertrain' ? 'moderate' : 'professional',
+    safety_escalation: dtcInfo.safetyEscalation,
   };
 }
 

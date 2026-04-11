@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,16 +9,17 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Redirect, router, usePathname } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import type { AppShellProps } from './types';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAppShell } from '../../contexts/AppShellContext';
 import type { SidebarChatItem, SidebarVehicleItem } from '../../types/shell';
 import { getUserChatSessions } from '../../services/chat-service';
 import { getUserVehicles } from '../../services/vehicle-service';
-import { radii, shell } from '../../theme/tokens';
+import { radii, shell, elevation } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import { sp, pressedOpacity } from '../../theme/spacing';
 import GearLogo from '../branding/GearLogo';
 import GearActionIcon from '../branding/GearActionIcon';
 import AppSidebar from './AppSidebar';
@@ -33,7 +34,6 @@ function formatDate(iso?: string): string | undefined {
 
 export default function AppShell({ routeKey, title, subtitle, children }: AppShellProps) {
   const { colors } = useTheme();
-  const pathname = usePathname();
   const { width } = useWindowDimensions();
   const { session, user, loading, signOut } = useAuth();
   const {
@@ -49,6 +49,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
   const [vehicles, setVehicles] = useState<SidebarVehicleItem[]>([]);
   const [chats, setChats] = useState<SidebarChatItem[]>([]);
   const [isSidebarLoading, setIsSidebarLoading] = useState(false);
+  const isFetchingRef = useRef(false);
 
   const loadSidebarData = useCallback(async () => {
     if (!user?.user_id) {
@@ -56,12 +57,13 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
       setChats([]);
       return;
     }
-
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setIsSidebarLoading(true);
     try {
       const [vehicleRows, chatRows] = await Promise.all([
         getUserVehicles(user.user_id),
-        getUserChatSessions(user.user_id),
+        getUserChatSessions(user.user_id, 8),
       ]);
 
       const mappedVehicles = vehicleRows.map((vehicle) => ({
@@ -75,7 +77,6 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
 
       const mappedChats = chatRows
         .filter((chat) => Boolean(chat.vehicle_id))
-        .slice(0, 8)
         .map((chat) => ({
           id: chat.session_id,
           vehicleId: chat.vehicle_id,
@@ -90,12 +91,13 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
       console.warn('Could not load app shell data:', error);
     } finally {
       setIsSidebarLoading(false);
+      isFetchingRef.current = false;
     }
   }, [user?.user_id]);
 
   useEffect(() => {
     loadSidebarData();
-  }, [loadSidebarData, pathname]);
+  }, [loadSidebarData]);
 
   const shellSidebarWidth = useMemo(
     () => (isSidebarCollapsed ? shell.sidebarCollapsed : shell.sidebarExpanded),
@@ -134,8 +136,9 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 14,
-      paddingVertical: 12,
-      gap: 12,
+      paddingVertical: sp[3],
+      gap: sp[3],
+      ...elevation.sm,
     },
     iconButton: {
       minWidth: 44,
@@ -175,10 +178,10 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
-      paddingHorizontal: 12,
+      paddingHorizontal: sp[3],
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      gap: sp[2],
     },
     accountButtonLabel: {
       color: colors.textPrimary,
@@ -190,7 +193,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
       minHeight: 0,
     },
     buttonInteraction: {
-      opacity: 0.92,
+      opacity: pressedOpacity,
     },
     overlay: {
       ...StyleSheet.absoluteFillObject,
@@ -259,6 +262,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
                 pressed && styles.buttonInteraction,
               ]}
               onPress={toggleMobileSidebar}
+              accessibilityLabel="Open menu"
             >
               <Ionicons name="menu" size={22} color={colors.textPrimary} />
             </Pressable>
@@ -290,6 +294,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
               styles.accountButton,
               pressed && styles.buttonInteraction,
             ]}
+            accessibilityLabel="Account settings"
           >
             <GearActionIcon size="md" />
             <Text style={styles.accountButtonLabel} numberOfLines={1}>
@@ -305,7 +310,7 @@ export default function AppShell({ routeKey, title, subtitle, children }: AppShe
 
       {!isDesktop && isMobileSidebarOpen && (
         <>
-          <Pressable style={styles.overlay} onPress={closeMobileSidebar} />
+          <Pressable style={styles.overlay} onPress={closeMobileSidebar} accessibilityLabel="Close sidebar" />
           <View style={[styles.mobileSidebar, { width: Math.min(340, width * 0.84) }]}>
             <AppSidebar
               routeKey={routeKey}

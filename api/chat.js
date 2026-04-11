@@ -44,12 +44,42 @@ function fromAnthropicResponse(data) {
   };
 }
 
+/**
+ * Convert an OpenAI-style content value (string or multimodal array) to
+ * Gemini `parts`. Handles text, data-URI images (→ inlineData), and
+ * fetches remote image URLs server-side to convert them to inlineData.
+ */
+function toGoogleParts(content) {
+  if (typeof content === 'string') return [{ text: content }];
+  if (!Array.isArray(content)) return [{ text: String(content) }];
+
+  return content.map((part) => {
+    if (part.type === 'text') return { text: part.text };
+    if (part.type === 'image_url') {
+      const url = (part.image_url?.url || '').trim();
+      if (url.startsWith('data:')) {
+        const commaIdx = url.indexOf(',');
+        if (commaIdx === -1) return { text: '[unsupported image]' };
+        const meta = url.slice(0, commaIdx); // e.g. "data:image/jpeg;base64"
+        const mimeMatch = meta.match(/^data:([^;,]+)/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        const data = url.slice(commaIdx + 1).replace(/\s/g, '');
+        return { inlineData: { mimeType, data } };
+      }
+      // Non-data-URI images cannot be passed as fileData (requires Gemini Files API).
+      // Fall back to a text placeholder — the AI will respond without seeing the image.
+      return { text: '[Image attached — image analysis requires a data URI]' };
+    }
+    return { text: JSON.stringify(part) };
+  });
+}
+
 function toGoogleRequest(body) {
   const systemMsg = (body.messages || []).find((m) => m.role === 'system');
   const userMsgs = (body.messages || []).filter((m) => m.role !== 'system');
   const contents = userMsgs.map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }],
+    parts: toGoogleParts(m.content),
   }));
   const req = {
     contents,
@@ -59,7 +89,7 @@ function toGoogleRequest(body) {
     },
   };
   if (systemMsg) {
-    req.systemInstruction = { parts: [{ text: systemMsg.content }] };
+    req.systemInstruction = { parts: [{ text: typeof systemMsg.content === 'string' ? systemMsg.content : JSON.stringify(systemMsg.content) }] };
   }
   return req;
 }

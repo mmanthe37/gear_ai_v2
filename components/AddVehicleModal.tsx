@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { decodeVIN } from '../services/vin-decoder';
+import { useTheme } from '../contexts/ThemeContext';
+import { sp } from '../theme/spacing';
+import { typeScale, fontWeights } from '../theme/typography';
+import { radii } from '../theme/tokens';
 
 interface AddVehicleModalProps {
   visible: boolean;
@@ -10,6 +14,7 @@ interface AddVehicleModalProps {
 }
 
 export default function AddVehicleModal({ visible, onClose, onAdd }: AddVehicleModalProps) {
+  const { colors } = useTheme();
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [year, setYear] = useState('');
@@ -72,59 +77,59 @@ export default function AddVehicleModal({ visible, onClose, onAdd }: AddVehicleM
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose}>
-            <Ionicons name="close" size={24} color="#666" />
+      <View style={modalStyles.container}>
+        <View style={modalStyles.header}>
+          <TouchableOpacity onPress={onClose} accessibilityLabel="Close">
+            <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
-          <Text style={styles.title}>Add Vehicle</Text>
-          <TouchableOpacity onPress={handleAdd} disabled={saving || decoding}>
-            {saving ? <ActivityIndicator size="small" color="#007AFF" /> : <Text style={styles.saveButton}>Save</Text>}
+          <Text style={modalStyles.title}>Add Vehicle</Text>
+          <TouchableOpacity onPress={handleAdd} disabled={saving || decoding} accessibilityLabel="Save vehicle">
+            {saving ? <ActivityIndicator size="small" color={colors.actionAccent} /> : <Text style={modalStyles.saveButton}>Save</Text>}
           </TouchableOpacity>
         </View>
         
-        <View style={styles.form}>
-          <Text style={styles.label}>VIN <Text style={styles.vinHint}>(auto-fills vehicle info)</Text></Text>
-          <View style={styles.vinRow}>
+        <View style={modalStyles.form}>
+          <Text style={modalStyles.label}>VIN <Text style={modalStyles.vinHint}>(auto-fills vehicle info)</Text></Text>
+          <View style={modalStyles.vinRow}>
             <TextInput
-              style={[styles.input, styles.vinInput]}
+              style={[modalStyles.input, modalStyles.vinInput]}
               value={vin}
               onChangeText={handleVinChange}
               placeholder="Enter 17-character VIN"
               maxLength={17}
               autoCapitalize="characters"
             />
-            {decoding && <ActivityIndicator size="small" color="#007AFF" style={styles.vinSpinner} />}
+            {decoding && <ActivityIndicator size="small" color={colors.actionAccent} style={modalStyles.vinSpinner} />}
           </View>
 
-          <Text style={styles.label}>Make *</Text>
+          <Text style={modalStyles.label}>Make *</Text>
           <TextInput
-            style={styles.input}
+            style={modalStyles.input}
             value={make}
             onChangeText={setMake}
             placeholder="e.g., Toyota"
           />
           
-          <Text style={styles.label}>Model *</Text>
+          <Text style={modalStyles.label}>Model *</Text>
           <TextInput
-            style={styles.input}
+            style={modalStyles.input}
             value={model}
             onChangeText={setModel}
             placeholder="e.g., Camry"
           />
           
-          <Text style={styles.label}>Year *</Text>
+          <Text style={modalStyles.label}>Year *</Text>
           <TextInput
-            style={styles.input}
+            style={modalStyles.input}
             value={year}
             onChangeText={setYear}
             placeholder="e.g., 2023"
             keyboardType="numeric"
           />
 
-          <Text style={styles.label}>Mileage (Optional)</Text>
+          <Text style={modalStyles.label}>Mileage (Optional)</Text>
           <TextInput
-            style={styles.input}
+            style={modalStyles.input}
             value={mileage}
             onChangeText={setMileage}
             placeholder="e.g., 25000"
@@ -136,7 +141,7 @@ export default function AddVehicleModal({ visible, onClose, onAdd }: AddVehicleM
   );
 }
 
-const styles = StyleSheet.create({
+const modalStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -145,41 +150,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: sp[4],
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: typeScale.lg,
+    fontWeight: fontWeights.semibold,
     color: '#333',
   },
   saveButton: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typeScale.md,
+    fontWeight: fontWeights.semibold,
     color: '#007AFF',
   },
   form: {
-    padding: 16,
+    padding: sp[4],
   },
   label: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: typeScale.md,
+    fontWeight: fontWeights.medium,
     color: '#333',
-    marginBottom: 8,
-    marginTop: 16,
+    marginBottom: sp[2],
+    marginTop: sp[4],
   },
   vinHint: {
-    fontSize: 13,
-    fontWeight: '400',
+    fontSize: typeScale.xs,
+    fontWeight: fontWeights.regular,
     color: '#007AFF',
   },
   input: {
     backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+    borderRadius: radii.sm,
+    padding: sp[3],
+    fontSize: typeScale.md,
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },

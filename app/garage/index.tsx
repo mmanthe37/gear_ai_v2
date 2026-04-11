@@ -7,17 +7,31 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import GearActionIcon from '../../components/branding/GearActionIcon';
 import GearLogo from '../../components/branding/GearLogo';
-import ModernVehicleCard from '../../components/ModernVehicleCard';
 import AppShell from '../../components/layout/AppShell';
+import { Badge, ErrorBanner } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
-import { getUserVehicles } from '../../services/vehicle-service';
-import type { Vehicle } from '../../types/vehicle';
-import { radii } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
+import { getUserVehicles } from '../../services/vehicle-service';
+import { sp, touchMinHeight, pressedOpacity } from '../../theme/spacing';
+import { radii } from '../../theme/tokens';
 import { fontFamilies, typeScale } from '../../theme/typography';
+import type { Vehicle, VehicleStatus } from '../../types/vehicle';
+
+const STATUS_LABELS: Record<VehicleStatus, string> = {
+  active: 'Active', stored: 'Stored', for_sale: 'For Sale', sold: 'Sold', totaled: 'Totaled',
+};
+
+const STATUS_BADGE_VARIANTS: Record<VehicleStatus, 'success' | 'warning' | 'danger' | 'info' | 'neutral'> = {
+  active: 'success',
+  stored: 'info',
+  for_sale: 'warning',
+  sold: 'neutral',
+  totaled: 'danger',
+};
 
 function StatTile({ label, value }: { label: string; value: string }) {
   const { colors } = useTheme();
@@ -27,8 +41,8 @@ function StatTile({ label, value }: { label: string; value: string }) {
       borderColor: colors.border,
       backgroundColor: colors.surfaceAlt,
       borderRadius: radii.md,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
+      paddingVertical: sp[3],
+      paddingHorizontal: sp[3],
       minWidth: 150,
       flex: 1,
     },
@@ -41,7 +55,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
       color: colors.textSecondary,
       fontFamily: fontFamilies.body,
       fontSize: typeScale.xs,
-      marginTop: 4,
+      marginTop: sp[1],
     },
   });
   return (
@@ -57,15 +71,18 @@ export default function GarageScreen() {
   const { user } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadVehicles = useCallback(async () => {
     if (!user?.user_id) return;
+    setLoadError(null);
     setLoading(true);
     try {
       const rows = await getUserVehicles(user.user_id);
       setVehicles(rows);
     } catch (error) {
       console.warn('Could not load vehicles:', error);
+      setLoadError((error as Error)?.message || 'Failed to load your garage.');
     } finally {
       setLoading(false);
     }
@@ -81,27 +98,40 @@ export default function GarageScreen() {
     return Math.round(sum / vehicles.length);
   }, [vehicles]);
 
+  const openManualLookup = useCallback((vehicle: Vehicle) => {
+    router.push({
+      pathname: '/manuals',
+      params: {
+        vehicleId: vehicle.vehicle_id,
+        vin: vehicle.vin || '',
+        year: vehicle.year.toString(),
+        make: vehicle.make,
+        model: vehicle.model,
+      },
+    });
+  }, []);
+
   const styles = StyleSheet.create({
     scroll: {
       flex: 1,
     },
     content: {
-      padding: 16,
-      gap: 16,
+      padding: sp[4],
+      gap: sp[4],
     },
     panel: {
       borderRadius: radii.lg,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
-      padding: 16,
-      gap: 16,
+      padding: sp[4],
+      gap: sp[4],
     },
     panelHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      gap: 14,
+      gap: sp[3],
       flexWrap: 'wrap',
     },
     panelTitle: {
@@ -113,17 +143,17 @@ export default function GarageScreen() {
       color: colors.textSecondary,
       fontFamily: fontFamilies.body,
       fontSize: typeScale.sm,
-      marginTop: 4,
+      marginTop: sp[1],
     },
     primaryButton: {
-      minHeight: 44,
+      minHeight: touchMinHeight,
       borderRadius: radii.md,
-      paddingHorizontal: 14,
+      paddingHorizontal: sp[3],
       backgroundColor: colors.brandAccent,
       justifyContent: 'center',
       alignItems: 'center',
       flexDirection: 'row',
-      gap: 8,
+      gap: sp[2],
     },
     primaryButtonText: {
       color: colors.background,
@@ -132,7 +162,7 @@ export default function GarageScreen() {
     },
     statsRow: {
       flexDirection: 'row',
-      gap: 10,
+      gap: sp[3],
       flexWrap: 'wrap',
     },
     listWrap: {
@@ -140,8 +170,8 @@ export default function GarageScreen() {
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
-      padding: 16,
-      gap: 12,
+      padding: sp[4],
+      gap: sp[3],
     },
     sectionTitle: {
       color: colors.textPrimary,
@@ -152,8 +182,8 @@ export default function GarageScreen() {
       minHeight: 180,
       justifyContent: 'center',
       alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 14,
+      gap: sp[2],
+      paddingHorizontal: sp[3],
     },
     emptyTitle: {
       color: colors.textPrimary,
@@ -166,21 +196,61 @@ export default function GarageScreen() {
       fontSize: typeScale.sm,
       textAlign: 'center',
     },
-    chatButton: {
+    vehicleCard: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      backgroundColor: colors.surfaceAlt,
+      minHeight: sp[16],
+      paddingHorizontal: sp[3],
+      paddingVertical: sp[3],
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: sp[3],
+    },
+    vehicleInfoWrap: {
+      flex: 1,
+      minWidth: 0,
+    },
+    vehicleName: {
+      color: colors.textPrimary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.md,
+    },
+    vehicleSubName: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+      marginTop: 1,
+    },
+    vehicleMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: sp[2],
+      marginTop: sp[1],
+      flexWrap: 'wrap',
+    },
+    vehicleMeta: {
+      color: colors.textSecondary,
+      fontFamily: fontFamilies.body,
+      fontSize: typeScale.xs,
+    },
+    secondaryButton: {
       minHeight: 36,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radii.full,
       backgroundColor: colors.surface,
-      paddingHorizontal: 14,
+      paddingHorizontal: sp[3],
       justifyContent: 'center',
       alignItems: 'center',
       flexDirection: 'row',
-      gap: 6,
-      alignSelf: 'flex-end',
-      marginTop: -8,
-      marginBottom: 8,
-      marginRight: 4,
+      gap: sp[2],
+    },
+    vehicleActions: {
+      gap: sp[2],
+      alignItems: 'flex-end',
     },
     secondaryButtonText: {
       color: colors.textPrimary,
@@ -188,7 +258,7 @@ export default function GarageScreen() {
       fontSize: typeScale.xs,
     },
     buttonInteraction: {
-      opacity: 0.92,
+      opacity: pressedOpacity,
     },
   });
 
@@ -203,6 +273,7 @@ export default function GarageScreen() {
             </View>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Add Vehicle"
               style={({ pressed }) => [
                 styles.primaryButton,
                 pressed && styles.buttonInteraction,
@@ -220,11 +291,18 @@ export default function GarageScreen() {
           </View>
         </View>
 
+        {loadError && (
+          <ErrorBanner
+            message={`Failed to load: ${loadError}`}
+            onDismiss={loadVehicles}
+          />
+        )}
+
         <View style={styles.listWrap}>
           <Text style={styles.sectionTitle}>Garage Vehicles</Text>
 
           {loading ? (
-            <ActivityIndicator size="large" color={colors.brandAccent} style={{ marginTop: 20 }} />
+            <ActivityIndicator size="large" color={colors.brandAccent} style={{ marginTop: sp[5] }} />
           ) : vehicles.length === 0 ? (
             <View style={styles.emptyState}>
               <GearLogo variant="micro" size="lg" />
@@ -233,37 +311,81 @@ export default function GarageScreen() {
             </View>
           ) : (
             vehicles.map((vehicle) => (
-              <View key={vehicle.vehicle_id}>
-                <ModernVehicleCard
-                  make={vehicle.make}
-                  model={vehicle.model}
-                  year={vehicle.year}
-                  vin={vehicle.vin}
-                  mileage={vehicle.current_mileage}
-                  onPress={() => router.push(`/garage/${vehicle.vehicle_id}`)}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() =>
-                    router.push({
-                      pathname: '/chat/[id]',
-                      params: {
-                        id: vehicle.vehicle_id,
-                        make: vehicle.make,
-                        model: vehicle.model,
-                        year: vehicle.year.toString(),
-                      },
-                    })
-                  }
-                  style={({ pressed }) => [
-                    styles.chatButton,
-                    pressed && styles.buttonInteraction,
-                  ]}
-                >
-                  <GearActionIcon size="sm" />
-                  <Text style={styles.secondaryButtonText}>Chat with AI</Text>
-                </Pressable>
-              </View>
+              <Pressable
+                key={vehicle.vehicle_id}
+                accessibilityRole="button"
+                accessibilityLabel={`View ${vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}`}
+                style={({ pressed }) => [
+                  styles.vehicleCard,
+                  pressed && styles.buttonInteraction,
+                ]}
+                onPress={() => router.push(`/garage/${vehicle.vehicle_id}`)}
+              >
+                <View style={styles.vehicleInfoWrap}>
+                  <Text style={styles.vehicleName}>
+                    {vehicle.nickname
+                      ? `${vehicle.nickname}`
+                      : `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                  </Text>
+                  {vehicle.nickname && (
+                    <Text style={styles.vehicleSubName}>
+                      {vehicle.year} {vehicle.make} {vehicle.model}
+                    </Text>
+                  )}
+                  <View style={styles.vehicleMetaRow}>
+                    <Text style={styles.vehicleMeta}>
+                      {vehicle.current_mileage
+                        ? `${vehicle.current_mileage.toLocaleString()} mi`
+                        : 'Mileage not set'}
+                    </Text>
+                    {vehicle.status && vehicle.status !== 'active' && (
+                      <Badge
+                        label={STATUS_LABELS[vehicle.status as VehicleStatus]}
+                        variant={STATUS_BADGE_VARIANTS[vehicle.status as VehicleStatus]}
+                        size="sm"
+                      />
+                    )}
+                  </View>
+                </View>
+
+                <View style={styles.vehicleActions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open manual for ${vehicle.make} ${vehicle.model}`}
+                    onPress={() => openManualLookup(vehicle)}
+                    style={({ pressed }) => [
+                      styles.secondaryButton,
+                      pressed && styles.buttonInteraction,
+                    ]}
+                  >
+                    <Ionicons name="document-text-outline" size={14} color={colors.textPrimary} />
+                    <Text style={styles.secondaryButtonText}>Manual</Text>
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Chat about ${vehicle.make} ${vehicle.model}`}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/chat/[id]',
+                        params: {
+                          id: vehicle.vehicle_id,
+                          make: vehicle.make,
+                          model: vehicle.model,
+                          year: vehicle.year.toString(),
+                        },
+                      })
+                    }
+                    style={({ pressed }) => [
+                      styles.secondaryButton,
+                      pressed && styles.buttonInteraction,
+                    ]}
+                  >
+                    <GearActionIcon size="sm" />
+                    <Text style={styles.secondaryButtonText}>Chat</Text>
+                  </Pressable>
+                </View>
+              </Pressable>
             ))
           )}
         </View>
@@ -271,4 +393,3 @@ export default function GarageScreen() {
     </AppShell>
   );
 }
-

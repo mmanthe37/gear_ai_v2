@@ -13,6 +13,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import type { Vehicle } from '../types/vehicle';
 import type { MaintenanceFormData, MaintenanceType } from '../types/maintenance';
+import { useTheme } from '../contexts/ThemeContext';
+import { sp } from '../theme/spacing';
+import { typeScale, fontWeights } from '../theme/typography';
+import { radii } from '../theme/tokens';
 
 interface AddMaintenanceModalProps {
   visible: boolean;
@@ -30,6 +34,7 @@ const TYPES: { value: MaintenanceType; label: string }[] = [
 ];
 
 export default function AddMaintenanceModal({ visible, onClose, onAdd, vehicles }: AddMaintenanceModalProps) {
+  const { colors } = useTheme();
   const [vehicleId, setVehicleId] = useState('');
   const [title, setTitle] = useState('');
   const [type, setType] = useState<MaintenanceType>('routine');
@@ -81,12 +86,12 @@ export default function AddMaintenanceModal({ visible, onClose, onAdd, vehicles 
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose}>
-            <Ionicons name="close" size={24} color="#666" />
+          <TouchableOpacity onPress={onClose} accessibilityLabel="Close">
+            <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Add Service Record</Text>
-          <TouchableOpacity onPress={handleSave} disabled={saving}>
-            {saving ? <ActivityIndicator size="small" color="#007AFF" /> : <Text style={styles.saveBtn}>Save</Text>}
+          <TouchableOpacity onPress={handleSave} disabled={saving} accessibilityLabel="Save record">
+            {saving ? <ActivityIndicator size="small" color={colors.actionAccent} /> : <Text style={styles.saveBtn}>Save</Text>}
           </TouchableOpacity>
         </View>
 
@@ -99,6 +104,7 @@ export default function AddMaintenanceModal({ visible, onClose, onAdd, vehicles 
                 key={v.vehicle_id}
                 style={[styles.chip, vehicleId === v.vehicle_id && styles.chipActive]}
                 onPress={() => setVehicleId(v.vehicle_id)}
+                accessibilityLabel={`Select ${v.year} ${v.make} ${v.model}`}
               >
                 <Text style={[styles.chipText, vehicleId === v.vehicle_id && styles.chipTextActive]}>
                   {v.year} {v.make} {v.model}
@@ -118,6 +124,7 @@ export default function AddMaintenanceModal({ visible, onClose, onAdd, vehicles 
                 key={t.value}
                 style={[styles.chip, type === t.value && styles.chipActive]}
                 onPress={() => setType(t.value)}
+                accessibilityLabel={`Type: ${t.label}`}
               >
                 <Text style={[styles.chipText, type === t.value && styles.chipTextActive]}>{t.label}</Text>
               </TouchableOpacity>
@@ -159,34 +166,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: sp[4],
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
-  saveBtn: { fontSize: 16, fontWeight: '600', color: '#007AFF' },
-  form: { padding: 16 },
-  label: { fontSize: 15, fontWeight: '500', color: '#333', marginBottom: 6, marginTop: 14 },
+  headerTitle: { fontSize: typeScale.lg, fontWeight: fontWeights.semibold, color: '#333' },
+  saveBtn: { fontSize: typeScale.md, fontWeight: fontWeights.semibold, color: '#007AFF' },
+  form: { padding: sp[4] },
+  label: { fontSize: 15, fontWeight: fontWeights.medium, color: '#333', marginBottom: 6, marginTop: 14 },
   input: {
     backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: radii.sm,
+    padding: sp[3],
     fontSize: 15,
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
   textArea: { minHeight: 80, textAlignVertical: 'top' },
-  chipRow: { flexDirection: 'row', marginBottom: 4 },
+  chipRow: { flexDirection: 'row', marginBottom: sp[1] },
   chip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: sp[2],
+    borderRadius: radii.xl,
     backgroundColor: '#e8e8e8',
-    marginRight: 8,
+    marginRight: sp[2],
   },
   chipActive: { backgroundColor: '#007AFF' },
-  chipText: { fontSize: 13, fontWeight: '600', color: '#555' },
+  chipText: { fontSize: typeScale.xs, fontWeight: fontWeights.semibold, color: '#555' },
   chipTextActive: { color: '#fff' },
-  noVehicles: { fontSize: 13, color: '#999', paddingVertical: 8 },
+  noVehicles: { fontSize: typeScale.xs, color: '#999', paddingVertical: sp[2] },
 });

@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
+import { sp } from '../theme/spacing';
+import { typeScale, fontWeights } from '../theme/typography';
 
 interface ModernStatsCardProps {
   title: string;
@@ -44,8 +46,8 @@ export default function ModernStatsCard({
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      marginHorizontal: 8,
-      marginBottom: 16,
+      marginHorizontal: sp[2],
+      marginBottom: sp[4],
       borderRadius: 16,
       overflow: 'hidden',
       shadowColor: colors.actionAccent,
@@ -66,14 +68,14 @@ export default function ModernStatsCard({
       backgroundColor: colors.surface,
     },
     content: {
-      padding: 16,
+      padding: sp[4],
       minHeight: 120,
     },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 12,
+      marginBottom: sp[3],
     },
     iconContainer: {
       shadowColor: '#000',
@@ -90,22 +92,22 @@ export default function ModernStatsCard({
     },
     trendContainer: {
       backgroundColor: colors.surfaceAlt,
-      borderRadius: 12,
+      borderRadius: sp[3],
       padding: 6,
     },
     textContainer: {
       alignItems: 'center',
-      marginBottom: 12,
+      marginBottom: sp[3],
     },
     value: {
-      fontSize: 28,
-      fontWeight: '900',
+      fontSize: typeScale.xxl,
+      fontWeight: fontWeights.black,
       color: colors.textPrimary,
-      marginBottom: 4,
+      marginBottom: sp[1],
     },
     title: {
-      fontSize: 13,
-      fontWeight: '700',
+      fontSize: typeScale.xs,
+      fontWeight: fontWeights.bold,
       color: colors.textSecondary,
       textAlign: 'center',
       textTransform: 'uppercase',
@@ -113,7 +115,7 @@ export default function ModernStatsCard({
     },
     subtitle: {
       fontSize: 11,
-      fontWeight: '600',
+      fontWeight: fontWeights.semibold,
       color: colors.actionAccent,
       marginTop: 2,
       textAlign: 'center',

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -14,20 +15,23 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import AppShell from '../components/layout/AppShell';
 import GearActionIcon from '../components/branding/GearActionIcon';
 import GearLogo from '../components/branding/GearLogo';
+import { OverlayBackdrop } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { updateUserProfile, updateUserPreferences, deleteUserAccount } from '../services/auth-service';
 import { getUserVehicles } from '../services/vehicle-service';
 import { getMaintenanceRecords } from '../services/maintenance-service';
 import { uploadFile, STORAGE_BUCKETS } from '../services/storage-service';
 import { SubscriptionTiers } from '../types/user';
-import type { UserPreferences } from '../types/user';
+import type { UserPreferences, SubscriptionTier } from '../types/user';
 import type { Vehicle } from '../types/vehicle';
 import { radii } from '../theme/tokens';
 import type { ThemeMode } from '../theme/tokens';
-import { fontFamilies, typeScale } from '../theme/typography';
+import { fontFamilies, fontWeights, typeScale } from '../theme/typography';
+import { sp, touchMinHeight, pressedOpacity } from '../theme/spacing';
 import { useTheme } from '../contexts/ThemeContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -101,7 +105,7 @@ function SettingRow({
   const s = makeStyles(colors);
   const inner = (
     <View style={s.settingRow}>
-      <View style={{ flex: 1 }}>
+      <View style={s.flexOne}>
         <Text style={s.settingLabel}>{label}</Text>
         {sublabel && <Text style={s.settingSubLabel}>{sublabel}</Text>}
       </View>
@@ -110,7 +114,12 @@ function SettingRow({
   );
   if (onPress) {
     return (
-      <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [pressed && s.pressed]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={onPress}
+        style={({ pressed }) => [pressed && s.pressed]}
+      >
         {inner}
       </Pressable>
     );
@@ -153,6 +162,7 @@ function SegmentControl<T extends string>({
         <Pressable
           key={opt.value}
           accessibilityRole="button"
+          accessibilityLabel={opt.label}
           onPress={() => onChange(opt.value)}
           style={({ pressed }) => [
             s.segmentOpt,
@@ -182,7 +192,7 @@ function ComingSoonBadge() {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
-  const { colors, setTheme } = useTheme();
+  const { colors, setTheme, setAccentColor } = useTheme();
   const TIER_COLORS: Record<string, string> = {
     free: colors.textSecondary,
     pro: colors.brandAccent,
@@ -190,6 +200,7 @@ export default function SettingsScreen() {
     dealer: '#F59E0B',
   };
   const { user, signOut } = useAuth();
+  const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<Tab>('account');
   const [prefs, setPrefs]         = useState<UserPreferences>({ ...DEFAULT_PREFS, ...user?.preferences });
@@ -198,7 +209,9 @@ export default function SettingsScreen() {
   const [saving, setSaving]       = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showTierModal, setShowTierModal] = useState(false);
+  const [upgradeTargetTier, setUpgradeTargetTier] = useState<SubscriptionTier | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [activeIntegration, setActiveIntegration] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.preferences) setPrefs({ ...DEFAULT_PREFS, ...user.preferences });
@@ -384,6 +397,7 @@ export default function SettingsScreen() {
           />
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Save profile"
             onPress={handleSaveProfile}
             disabled={saving}
             style={({ pressed }) => [s.primaryBtn, saving && s.btnDisabled, pressed && s.pressed]}
@@ -421,10 +435,11 @@ export default function SettingsScreen() {
         <SectionCard title="Session">
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Sign out"
             onPress={signOut}
             style={({ pressed }) => [s.dangerOutlineBtn, pressed && s.pressed]}
           >
-            <Ionicons name="log-out-outline" size={16} color="#FCA5A5" />
+            <Ionicons name="log-out-outline" size={16} color={colors.danger} />
             <Text style={s.dangerOutlineBtnText}>Sign Out</Text>
           </Pressable>
         </SectionCard>
@@ -468,7 +483,7 @@ export default function SettingsScreen() {
           </SettingRow>
           <View style={s.chipRow}>
             {CURRENCIES.map((c) => (
-              <Pressable key={c} accessibilityRole="button" onPress={() => setPref('currency', c)}
+              <Pressable key={c} accessibilityRole="button" accessibilityLabel={`Currency ${c}`} onPress={() => setPref('currency', c)}
                 style={({ pressed }) => [
                   s.chip,
                   (prefs.currency || 'USD') === c && s.chipActive,
@@ -513,6 +528,7 @@ export default function SettingsScreen() {
               <Pressable
                 key={t.key}
                 accessibilityRole="button"
+                accessibilityLabel={`Theme ${t.label}`}
                 onPress={() => { setPref('theme_mode', t.key); setTheme(t.key as ThemeMode); }}
                 style={({ pressed }) => [
                   s.themeOption,
@@ -533,7 +549,7 @@ export default function SettingsScreen() {
           <SettingRow label="Accent Color" />
           <View style={s.colorRow}>
             {ACCENT_COLORS.map((ac) => (
-              <Pressable key={ac.value} accessibilityRole="button" onPress={() => setPref('accent_color', ac.value)}
+              <Pressable key={ac.value} accessibilityRole="button" accessibilityLabel={`Accent color ${ac.label}`} onPress={() => { setPref('accent_color', ac.value); setAccentColor(ac.value); }}
                 style={({ pressed }) => [s.colorSwatch, { backgroundColor: ac.value }, pressed && s.pressed]}
               >
                 {(prefs.accent_color || colors.brandAccent) === ac.value && (
@@ -551,11 +567,12 @@ export default function SettingsScreen() {
             rightSlot={<Ionicons name="chevron-down-outline" size={16} color={colors.textSecondary} />}
           />
           {vehicles.length > 0 && (
-            <View style={{ gap: 6, marginTop: 4 }}>
+            <View style={s.optionList}>
               {vehicles.map((v) => {
                 const isDefault = prefs.default_vehicle_id === v.vehicle_id;
                 return (
                   <Pressable key={v.vehicle_id} accessibilityRole="button"
+                    accessibilityLabel={`Select ${(v as any).nickname || `${v.year} ${v.make} ${v.model}`} as default`}
                     onPress={() => setPref('default_vehicle_id', v.vehicle_id)}
                     style={({ pressed }) => [s.vehicleOpt, isDefault && s.vehicleOptActive, pressed && s.pressed]}
                   >
@@ -572,11 +589,12 @@ export default function SettingsScreen() {
         </SectionCard>
 
         <SectionCard title="Language">
-          <View style={{ gap: 6 }}>
+          <View style={s.optionList}>
             {LANGUAGES.map((lang) => {
               const active = (prefs.language || 'en') === lang.value;
               return (
                 <Pressable key={lang.value} accessibilityRole="button"
+                  accessibilityLabel={`Language ${lang.label}`}
                   onPress={() => setPref('language', lang.value)}
                   style={({ pressed }) => [s.vehicleOpt, active && s.vehicleOptActive, pressed && s.pressed]}
                 >
@@ -590,6 +608,7 @@ export default function SettingsScreen() {
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Save preferences"
           onPress={handleSavePrefs}
           disabled={saving}
           style={({ pressed }) => [s.primaryBtn, saving && s.btnDisabled, pressed && s.pressed]}
@@ -657,6 +676,7 @@ export default function SettingsScreen() {
         <SectionCard title="Compare Plans">
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="View full tier comparison"
             onPress={() => setShowTierModal(true)}
             style={({ pressed }) => [s.secondaryBtn, pressed && s.pressed]}
           >
@@ -674,16 +694,21 @@ export default function SettingsScreen() {
               const t = SubscriptionTiers[tier];
               return (
                 <View key={tier} style={[s.upgradeTierCard, { borderColor: TIER_COLORS[tier] }]}>
-                  <View style={{ flex: 1 }}>
+                  <View style={s.flexOne}>
                     <Text style={[s.upgradeTierName, { color: TIER_COLORS[tier] }]}>{t.name}</Text>
                     <Text style={s.upgradeTierPrice}>
                       ${t.price_monthly}/mo
                       {t.price_yearly ? ` · $${t.price_yearly}/yr` : ''}
                     </Text>
                   </View>
-                  <View style={[s.upgradeBtn, { backgroundColor: TIER_COLORS[tier] + '22', borderColor: TIER_COLORS[tier] }]}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${t.name} plan`}
+                    onPress={() => setUpgradeTargetTier(tier)}
+                    style={({ pressed }) => [s.upgradeBtn, { backgroundColor: TIER_COLORS[tier] + '22', borderColor: TIER_COLORS[tier] }, pressed && s.pressed]}
+                  >
                     <Text style={[s.upgradeBtnText, { color: TIER_COLORS[tier] }]}>Select</Text>
-                  </View>
+                  </Pressable>
                 </View>
               );
             })}
@@ -698,19 +723,19 @@ export default function SettingsScreen() {
           <View style={s.modalRoot}>
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>Plan Comparison</Text>
-              <Pressable accessibilityRole="button" onPress={() => setShowTierModal(false)}
+              <Pressable accessibilityRole="button" accessibilityLabel="Close tier comparison" onPress={() => setShowTierModal(false)}
                 style={({ pressed }) => [s.modalCloseBtn, pressed && s.pressed]}
               >
                 <Ionicons name="close" size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
-            <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
+            <ScrollView contentContainerStyle={s.modalScrollContent}>
               {TIER_ORDER.map((tier) => {
                 const t = SubscriptionTiers[tier];
                 const isCurrent = tier === currentTier;
                 return (
                   <View key={tier} style={[s.tierCompCard, isCurrent && { borderColor: TIER_COLORS[tier] }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <View style={s.tierCompCardHeader}>
                       <Text style={[s.tierCompName, { color: TIER_COLORS[tier] }]}>{t.name}</Text>
                       <Text style={s.tierCompPrice}>
                         {t.price_monthly === 0 ? 'Free' : `$${t.price_monthly}/mo`}
@@ -734,11 +759,93 @@ export default function SettingsScreen() {
                         <Text style={[s.tierCompVal, val === '✓' && { color: colors.success }, val === '✗' && { color: colors.border }]}>{val}</Text>
                       </View>
                     ))}
+                    {!isCurrent && tier !== 'free' && (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Select ${t.name}`}
+                        onPress={() => { setShowTierModal(false); setUpgradeTargetTier(tier); }}
+                        style={({ pressed }) => [s.upgradeBtn, { marginTop: sp[3], alignSelf: 'flex-end', backgroundColor: TIER_COLORS[tier] + '22', borderColor: TIER_COLORS[tier] }, pressed && s.pressed]}
+                      >
+                        <Text style={[s.upgradeBtnText, { color: TIER_COLORS[tier] }]}>Select</Text>
+                      </Pressable>
+                    )}
                   </View>
                 );
               })}
             </ScrollView>
           </View>
+        </Modal>
+
+        {/* Upgrade Info Modal */}
+        <Modal visible={upgradeTargetTier !== null} animationType="slide" presentationStyle="pageSheet">
+          {upgradeTargetTier !== null && (() => {
+            const t = SubscriptionTiers[upgradeTargetTier];
+            const color = TIER_COLORS[upgradeTargetTier];
+            return (
+              <View style={s.modalRoot}>
+                <View style={s.modalHeader}>
+                  <Text style={s.modalTitle}>Upgrade to {t.name}</Text>
+                  <Pressable accessibilityRole="button" accessibilityLabel={`Close ${t.name} upgrade`} onPress={() => setUpgradeTargetTier(null)}
+                    style={({ pressed }) => [s.modalCloseBtn, pressed && s.pressed]}
+                  >
+                    <Ionicons name="close" size={22} color={colors.textSecondary} />
+                  </Pressable>
+                </View>
+                <ScrollView contentContainerStyle={s.modalScrollContentLg}>
+                  <View style={[s.upgradeModalPriceBadge, { borderColor: color }]}>
+                    <Text style={[s.upgradeModalTierName, { color }]}>{t.name}</Text>
+                    <Text style={s.upgradeModalPrice}>
+                      {t.price_monthly === 0 ? 'Free' : `$${t.price_monthly}/mo`}
+                      {t.price_yearly ? ` · $${t.price_yearly}/yr` : ''}
+                    </Text>
+                  </View>
+                  <View style={s.upgradeModalFeatures}>
+                    {([
+                      ['Vehicles', t.features.max_vehicles === 'unlimited' ? 'Unlimited' : `Up to ${t.features.max_vehicles}`],
+                      ['AI Chat', t.features.basic_ai_chat ? '✓' : '✗'],
+                      ['Manual RAG Chat', t.features.rag_manual_chat ? '✓' : '✗'],
+                      ['OBD Diagnostics', t.features.obd_diagnostics ? '✓' : '✗'],
+                      ['Damage Detection', t.features.damage_detection ? '✓' : '✗'],
+                      ['Valuation Tracking', t.features.valuation_tracking ? '✓' : '✗'],
+                      ['Marketplace Tools', t.features.marketplace_tools ? '✓' : '✗'],
+                      ['API Access', t.features.api_access ? '✓' : '✗'],
+                      ...(t.limits.ai_messages_per_day !== undefined
+                        ? [['AI Messages / Day', String(t.limits.ai_messages_per_day)] as [string, string]]
+                        : []),
+                    ] as [string, string][]).map(([feat, val]) => (
+                      <View key={feat} style={s.tierCompRow}>
+                        <Text style={s.tierCompFeat}>{feat}</Text>
+                        <Text style={[s.tierCompVal, val === '✓' && { color: colors.success }, val === '✗' && { color: colors.border }]}>{val}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={s.upgradeModalNote}>
+                    <Ionicons name="information-circle-outline" size={18} color={colors.warning} />
+                    <Text style={s.upgradeModalNoteText}>
+                      Subscription management is coming soon. To upgrade early, contact us.
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Contact support"
+                    onPress={() => Linking.openURL('mailto:support@gear.ai')}
+                    style={({ pressed }) => [s.upgradeModalContactBtn, { borderColor: color, backgroundColor: color + '22' }, pressed && s.pressed]}
+                  >
+                    <Ionicons name="mail-outline" size={16} color={color} />
+                    <Text style={[s.upgradeModalContactBtnText, { color }]}>Contact Support</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Close"
+                    onPress={() => setUpgradeTargetTier(null)}
+                    style={({ pressed }) => [s.secondaryBtn, pressed && s.pressed]}
+                  >
+                    <Text style={s.secondaryBtnText}>Close</Text>
+                  </Pressable>
+                </ScrollView>
+              </View>
+            );
+          })()}
         </Modal>
       </>
     );
@@ -752,13 +859,13 @@ export default function SettingsScreen() {
             Download all your vehicles, maintenance records, and AI chat history.
           </Text>
           <View style={s.exportRow}>
-            <Pressable accessibilityRole="button" onPress={() => handleExport('json')} disabled={exporting}
+            <Pressable accessibilityRole="button" accessibilityLabel="Export as JSON" onPress={() => handleExport('json')} disabled={exporting}
               style={({ pressed }) => [s.exportBtn, pressed && s.pressed, exporting && s.btnDisabled]}
             >
               <GearActionIcon size="sm" />
               <Text style={s.exportBtnText}>Export JSON</Text>
             </Pressable>
-            <Pressable accessibilityRole="button" onPress={() => handleExport('csv')} disabled={exporting}
+            <Pressable accessibilityRole="button" accessibilityLabel="Export as CSV" onPress={() => handleExport('csv')} disabled={exporting}
               style={({ pressed }) => [s.exportBtn, pressed && s.pressed, exporting && s.btnDisabled]}
             >
               <GearActionIcon size="sm" />
@@ -787,10 +894,10 @@ export default function SettingsScreen() {
         </SectionCard>
 
         <SectionCard title="Danger Zone">
-          <Text style={[s.sectionDesc, { color: '#FCA5A5' }]}>
+          <Text style={[s.sectionDesc, { color: colors.danger }]}>
             Permanently delete your account and all associated data. This is irreversible.
           </Text>
-          <Pressable accessibilityRole="button" onPress={handleDeleteAccount}
+          <Pressable accessibilityRole="button" accessibilityLabel="Delete my account" onPress={handleDeleteAccount}
             style={({ pressed }) => [s.dangerBtn, pressed && s.pressed]}
           >
             <Ionicons name="trash-outline" size={16} color={colors.background} />
@@ -802,47 +909,194 @@ export default function SettingsScreen() {
   }
 
   function renderIntegrations() {
-    const integrations = [
+    const vin = vehicles[0]?.vin ?? '';
+    const notificationsEnabled = prefs.push_notifications ?? false;
+
+    type IntgAction = { label: string; icon: string; onPress: () => void; primary?: boolean };
+    type IntgConfig = {
+      title: string; icon: string; desc: string;
+      status: string; statusOk: boolean;
+      modalTitle: string; modalContent: string;
+      actions: IntgAction[];
+    };
+
+    const integrationConfigs: IntgConfig[] = [
       {
         title: 'OBD-II Device',
-        desc: 'Pair a Bluetooth OBD-II scanner to read live diagnostics from your vehicle.',
         icon: 'hardware-chip-outline',
+        desc: 'Pair a Bluetooth OBD-II scanner to read live diagnostics from your vehicle.',
+        status: 'Available',
+        statusOk: false,
+        modalTitle: 'OBD-II / ELM327 Scanner',
+        modalContent:
+          "To use live diagnostics, you'll need a Bluetooth ELM327 OBD-II adapter (available on Amazon for ~$15–$40). Once you have one:\n\n1. Plug the adapter into your car's OBD-II port (under the dash)\n2. Turn your car's ignition to ON\n3. Pair the adapter in your phone's Bluetooth settings\n4. Return to Diagnostics and tap 'Connect OBD Adapter'\n\nCompatible adapters: Veepeak OBDCheck BLE+, FIXD, BlueDriver",
+        actions: [
+          {
+            label: 'Shop Adapters',
+            icon: 'cart-outline',
+            onPress: () => Linking.openURL('https://www.amazon.com/s?k=elm327+bluetooth+obd2+adapter'),
+          },
+          {
+            label: 'Go to Diagnostics',
+            icon: 'pulse-outline',
+            primary: true,
+            onPress: () => { setActiveIntegration(null); router.push('/diagnostics'); },
+          },
+        ],
       },
       {
         title: 'Calendar Sync',
-        desc: 'Sync maintenance reminders to Google Calendar or Apple Calendar.',
         icon: 'calendar-outline',
+        desc: 'Receive push notifications for upcoming maintenance and service reminders.',
+        status: notificationsEnabled ? 'Enabled' : 'Set Up',
+        statusOk: notificationsEnabled,
+        modalTitle: 'Maintenance Reminders',
+        modalContent: notificationsEnabled
+          ? 'Push notifications are enabled. Gear AI will remind you about upcoming maintenance, recalls, and service intervals.'
+          : 'Gear AI can send you push notifications for upcoming maintenance. Enable notifications in your device settings to receive reminders.',
+        actions: [
+          {
+            label: 'Open Notification Settings',
+            icon: 'notifications-outline',
+            primary: true,
+            onPress: () => Linking.openURL(Platform.OS === 'ios' ? 'app-settings:' : 'app-settings:'),
+          },
+        ],
       },
       {
         title: 'Cloud Storage',
-        desc: 'Connect Google Drive, iCloud, or Dropbox to back up documents and manuals.',
         icon: 'cloud-outline',
+        desc: 'Vehicles, maintenance records, and chat history synced to secure cloud storage.',
+        status: '✓ Active',
+        statusOk: true,
+        modalTitle: 'Cloud Backup',
+        modalContent:
+          'Your Gear AI data (vehicles, maintenance records, chat history) is automatically synced to our secure cloud via Supabase. No additional setup needed.\n\nFor manual backup, use Settings → Data → Export JSON.',
+        actions: [
+          {
+            label: 'Export Data',
+            icon: 'download-outline',
+            primary: true,
+            onPress: () => { setActiveIntegration(null); setActiveTab('data'); },
+          },
+        ],
       },
       {
         title: 'Carfax / AutoCheck',
-        desc: 'Pull full vehicle history reports using your VIN.',
         icon: 'car-sport-outline',
+        desc: 'Pull full vehicle history reports using your VIN.',
+        status: 'Available',
+        statusOk: false,
+        modalTitle: 'Vehicle History Reports',
+        modalContent: vehicles.length === 0
+          ? 'Add a vehicle first to check its history.'
+          : `Pull a full vehicle history report using your VIN directly from Carfax or AutoCheck.\n\nVIN: ${vin}`,
+        actions: vehicles.length === 0 ? [] : [
+          {
+            label: 'Check on Carfax',
+            icon: 'document-text-outline',
+            onPress: () => Linking.openURL(`https://www.carfax.com/vehicle/${vin}`),
+          },
+          {
+            label: 'Check on AutoCheck',
+            icon: 'search-outline',
+            primary: true,
+            onPress: () => Linking.openURL(`https://www.autocheck.com/vehiclehistory/?vin=${vin}`),
+          },
+        ],
       },
     ];
+
+    const active = integrationConfigs.find((c) => c.title === activeIntegration);
+
     return (
       <>
         <Text style={s.sectionDesc} numberOfLines={2}>
           Connected services expand Gear AI's capabilities with your existing tools and hardware.
         </Text>
-        {integrations.map((intg) => (
-          <View key={intg.title} style={s.integrationCard}>
-            <View style={s.integrationIcon}>
-              <Ionicons name={intg.icon as any} size={22} color={colors.brandAccent} />
+        {integrationConfigs.map((intg) => (
+          <Pressable
+            key={intg.title}
+            accessibilityRole="button"
+            accessibilityLabel={`${intg.title} integration`}
+            onPress={() => setActiveIntegration(intg.title)}
+            style={({ pressed }) => [s.integrationCard, pressed && s.pressed]}
+          >
+            <View style={[s.integrationIcon, intg.statusOk && { borderColor: colors.success, backgroundColor: colors.successBannerBg }]}>
+              <Ionicons name={intg.icon as any} size={22} color={intg.statusOk ? colors.success : colors.brandAccent} />
             </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <View style={s.flexOne}>
+              <View style={s.integrationHeaderRow}>
                 <Text style={s.integrationTitle}>{intg.title}</Text>
-                <ComingSoonBadge />
+                <View style={[s.intgStatusBadge, intg.statusOk && s.intgStatusBadgeOk]}>
+                  <Text style={[s.intgStatusText, intg.statusOk && s.intgStatusTextOk]}>{intg.status}</Text>
+                </View>
               </View>
               <Text style={s.integrationDesc}>{intg.desc}</Text>
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+          </Pressable>
         ))}
+
+        {/* Integration Detail Modal */}
+        <Modal
+          visible={!!activeIntegration}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setActiveIntegration(null)}
+        >
+          <View style={s.modalRoot}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>{active?.modalTitle ?? ''}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close integration details"
+                onPress={() => setActiveIntegration(null)}
+                style={({ pressed }) => [s.modalCloseBtn, pressed && s.pressed]}
+              >
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={s.modalScrollContentLg}>
+              {active && (
+                <>
+                  <View style={s.intgModalIconWrap}>
+                    <Ionicons name={active.icon as any} size={36} color={colors.brandAccent} />
+                  </View>
+                  <Text style={s.intgModalContent}>{active.modalContent}</Text>
+                  {active.actions.length > 0 && (
+                    <View style={s.intgModalActions}>
+                      {active.actions.map((action) => (
+                        <Pressable
+                          key={action.label}
+                          accessibilityRole="button"
+                          accessibilityLabel={action.label}
+                          onPress={action.onPress}
+                          style={({ pressed }) => [
+                            action.primary ? s.primaryBtn : s.secondaryBtn,
+                            pressed && s.pressed,
+                          ]}
+                        >
+                          {action.primary ? (
+                            <View style={s.primaryBtnContent}>
+                              <Ionicons name={action.icon as any} size={16} color={colors.background} />
+                              <Text style={s.primaryBtnText}>{action.label}</Text>
+                            </View>
+                          ) : (
+                            <>
+                              <Ionicons name={action.icon as any} size={16} color={colors.textPrimary} />
+                              <Text style={s.secondaryBtnText}>{action.label}</Text>
+                            </>
+                          )}
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
+            </ScrollView>
+          </View>
+        </Modal>
       </>
     );
   }
@@ -857,6 +1111,8 @@ export default function SettingsScreen() {
             <Pressable
               key={tab.key}
               accessibilityRole="tab"
+              accessibilityLabel={tab.label}
+              accessibilityState={{ selected: activeTab === tab.key }}
               onPress={() => setActiveTab(tab.key)}
               style={({ pressed }) => [s.tab, activeTab === tab.key && s.tabActive, pressed && s.pressed]}
             >
@@ -894,7 +1150,10 @@ export default function SettingsScreen() {
 function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
   scroll: { flex: 1 },
-  content: { padding: 16, gap: 14, paddingBottom: 40 },
+  content: { padding: sp[4], gap: sp[4], paddingBottom: sp[10] },
+
+  // Shared
+  flexOne: { flex: 1 },
 
   // Tab bar
   tabBar: {
@@ -902,34 +1161,34 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
   },
-  tabBarInner: { paddingHorizontal: 12, paddingVertical: 4, gap: 4 },
+  tabBarInner: { paddingHorizontal: sp[3], paddingVertical: sp[1], gap: sp[1] },
   tab: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 12, paddingVertical: 9,
+    flexDirection: 'row', alignItems: 'center', gap: sp[1],
+    paddingHorizontal: sp[3], paddingVertical: sp[2],
     borderRadius: radii.md, borderWidth: 1, borderColor: 'transparent',
   },
   tabActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
-  tabLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+  tabLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, fontWeight: fontWeights.medium },
   tabLabelActive: { color: colors.brandAccent },
 
   // Brand
-  brandRow: { alignItems: 'center', marginBottom: 4 },
+  brandRow: { alignItems: 'center', marginBottom: sp[1] },
 
   // Card
   card: {
     borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg,
-    backgroundColor: colors.surface, padding: 14, gap: 10,
+    backgroundColor: colors.surface, padding: sp[4], gap: sp[3],
   },
-  cardTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md },
+  cardTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.md, fontWeight: fontWeights.semibold },
 
   // Setting row
   settingRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 6, gap: 10,
+    paddingVertical: sp[2], gap: sp[3],
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  settingLabel: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  settingSubLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 2 },
+  settingLabel: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, fontWeight: fontWeights.medium },
+  settingSubLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: sp[1] },
   settingValue: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
   inlineInput: {
     color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm,
@@ -937,182 +1196,239 @@ function makeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   },
 
   // Segment control
-  segment: { flexDirection: 'row', gap: 4 },
+  segment: { flexDirection: 'row', gap: sp[1] },
   segmentOpt: {
-    paddingHorizontal: 10, paddingVertical: 5,
+    paddingHorizontal: sp[3], paddingVertical: sp[1],
     borderRadius: radii.md, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
   },
   segmentOptActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
-  segmentLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+  segmentLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, fontWeight: fontWeights.medium },
   segmentLabelActive: { color: colors.brandAccent },
 
   // Chips
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: sp[2] },
   chip: {
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: radii.full,
+    paddingHorizontal: sp[3], paddingVertical: sp[2], borderRadius: radii.full,
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt,
   },
   chipActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
-  chipText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-  chipTextActive: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+  chipText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, fontWeight: fontWeights.medium },
+  chipTextActive: { color: colors.brandAccent, fontFamily: fontFamilies.body, fontSize: typeScale.xs, fontWeight: fontWeights.medium },
 
   // Theme options
-  themeRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  themeRow: { flexDirection: 'row', gap: sp[2], marginTop: sp[1] },
   themeOption: {
-    flex: 1, alignItems: 'center', gap: 5, paddingVertical: 10,
+    flex: 1, alignItems: 'center', gap: sp[1], paddingVertical: sp[3],
     borderRadius: radii.md, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
   },
   themeOptionActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
-  themeOptionLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
+  themeOptionLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, fontWeight: fontWeights.medium },
 
   // Color swatches
-  colorRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  colorRow: { flexDirection: 'row', gap: sp[3], marginTop: sp[1] },
   colorSwatch: {
-    width: 32, height: 32, borderRadius: 16,
+    width: sp[8], height: sp[8], borderRadius: sp[4],
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 2, borderColor: 'transparent',
   },
 
+  // Option list (vehicles / languages)
+  optionList: { gap: sp[2], marginTop: sp[1] },
+
   // Vehicle / language options
   vehicleOpt: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 40,
-    paddingHorizontal: 10, borderRadius: radii.md, borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', gap: sp[2], minHeight: touchMinHeight,
+    paddingHorizontal: sp[3], borderRadius: radii.md, borderWidth: 1,
     borderColor: colors.border, backgroundColor: colors.surfaceAlt,
   },
   vehicleOptActive: { borderColor: colors.brandAccent, backgroundColor: colors.accentTint },
-  vehicleOptText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, flex: 1 },
+  vehicleOptText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, fontWeight: fontWeights.medium, flex: 1 },
 
   // Buttons
   primaryBtn: {
-    minHeight: 44, borderRadius: radii.md, backgroundColor: colors.brandAccent,
+    minHeight: touchMinHeight, borderRadius: radii.md, backgroundColor: colors.brandAccent,
     justifyContent: 'center', alignItems: 'center',
   },
   primaryBtnContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: sp[2],
   },
-  primaryBtnText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
+  primaryBtnText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm, fontWeight: fontWeights.semibold },
   secondaryBtn: {
-    minHeight: 44, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border,
+    minHeight: touchMinHeight, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surfaceAlt, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 8,
+    justifyContent: 'center', gap: sp[2],
   },
-  secondaryBtnText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+  secondaryBtnText: { color: colors.textPrimary, fontFamily: fontFamilies.body, fontSize: typeScale.sm, fontWeight: fontWeights.medium },
   dangerOutlineBtn: {
-    minHeight: 44, borderRadius: radii.md, borderWidth: 1, borderColor: colors.danger,
-    backgroundColor: 'rgba(239,68,68,0.10)', flexDirection: 'row',
-    alignItems: 'center', justifyContent: 'center', gap: 8,
+    minHeight: touchMinHeight, borderRadius: radii.md, borderWidth: 1, borderColor: colors.danger,
+    backgroundColor: colors.dangerBannerBg, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: sp[2],
   },
-  dangerOutlineBtnText: { color: '#FCA5A5', fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
+  dangerOutlineBtnText: { color: colors.danger, fontFamily: fontFamilies.heading, fontSize: typeScale.sm, fontWeight: fontWeights.semibold },
   dangerBtn: {
-    minHeight: 44, borderRadius: radii.md, backgroundColor: colors.danger,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    minHeight: touchMinHeight, borderRadius: radii.md, backgroundColor: colors.danger,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: sp[2],
   },
-  dangerBtnText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
+  dangerBtnText: { color: colors.background, fontFamily: fontFamilies.heading, fontSize: typeScale.sm, fontWeight: fontWeights.semibold },
   btnDisabled: { opacity: 0.55 },
-  pressed: { opacity: 0.88 },
+  pressed: { opacity: pressedOpacity },
 
   // Tier badge
   tierBadge: {
-    borderWidth: 1, borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 3,
+    borderWidth: 1, borderRadius: radii.full, paddingHorizontal: sp[3], paddingVertical: sp[1],
   },
-  tierBadgeText: { fontFamily: fontFamilies.heading, fontSize: typeScale.xs },
+  tierBadgeText: { fontFamily: fontFamilies.heading, fontSize: typeScale.xs, fontWeight: fontWeights.bold },
 
   // Subscription plan
-  planHero: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  planHero: { flexDirection: 'row', alignItems: 'center', gap: sp[3] },
   planBadge: {
-    borderWidth: 1, borderRadius: radii.md, paddingHorizontal: 14, paddingVertical: 6,
+    borderWidth: 1, borderRadius: radii.md, paddingHorizontal: sp[4], paddingVertical: sp[2],
   },
-  planBadgeText: { fontFamily: fontFamilies.heading, fontSize: typeScale.md },
+  planBadgeText: { fontFamily: fontFamilies.heading, fontSize: typeScale.md, fontWeight: fontWeights.bold },
   planPrice: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
 
   // Usage
-  usageRow: { flexDirection: 'row', gap: 10 },
+  usageRow: { flexDirection: 'row', gap: sp[3] },
   usageTile: {
     flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md,
-    backgroundColor: colors.surfaceAlt, padding: 12, gap: 4,
+    backgroundColor: colors.surfaceAlt, padding: sp[3], gap: sp[1],
   },
-  usageTileValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.xxl },
+  usageTileValue: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.xxl, fontWeight: fontWeights.bold },
   usageTileLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   usageBar: {
-    height: 4, borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden', marginTop: 4,
+    height: sp[1], borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden', marginTop: sp[1],
   },
   usageBarFill: { height: '100%', borderRadius: 2 },
 
   // Upgrade
   upgradeDesc: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
   upgradeTierCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderWidth: 1, borderRadius: radii.md, padding: 12,
+    flexDirection: 'row', alignItems: 'center', gap: sp[3],
+    borderWidth: 1, borderRadius: radii.md, padding: sp[3],
     backgroundColor: colors.surfaceAlt,
   },
-  upgradeTierName: { fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-  upgradeTierPrice: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 2 },
+  upgradeTierName: { fontFamily: fontFamilies.heading, fontSize: typeScale.sm, fontWeight: fontWeights.bold },
+  upgradeTierPrice: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: sp[1] },
   upgradeBtn: {
-    borderWidth: 1, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderRadius: radii.md, paddingHorizontal: sp[3], paddingVertical: sp[2],
   },
-  upgradeBtnText: { fontFamily: fontFamilies.heading, fontSize: typeScale.xs },
+  upgradeBtnText: { fontFamily: fontFamilies.heading, fontSize: typeScale.xs, fontWeight: fontWeights.semibold },
   upgradeNote: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textAlign: 'center' },
 
   // Tier comparison modal
   modalRoot: { flex: 1, backgroundColor: colors.background },
   modalHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14,
+    paddingHorizontal: sp[4], paddingVertical: sp[4],
     borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface,
   },
-  modalTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.lg },
-  modalCloseBtn: { padding: 6 },
+  modalTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.lg, fontWeight: fontWeights.bold },
+  modalCloseBtn: { padding: sp[2] },
+  modalScrollContent: { padding: sp[4], gap: sp[3] },
+  modalScrollContentLg: { padding: sp[5], gap: sp[4] },
   tierCompCard: {
     borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg,
-    backgroundColor: colors.surface, padding: 14,
+    backgroundColor: colors.surface, padding: sp[4],
   },
-  tierCompName: { fontFamily: fontFamilies.heading, fontSize: typeScale.md },
+  tierCompCardHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: sp[2], marginBottom: sp[2],
+  },
+  tierCompName: { fontFamily: fontFamilies.heading, fontSize: typeScale.md, fontWeight: fontWeights.bold },
   tierCompPrice: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
   tierCompRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: colors.border,
+    paddingVertical: sp[1], borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   tierCompFeat: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs },
-  tierCompVal: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.xs },
+  tierCompVal: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.xs, fontWeight: fontWeights.semibold },
   currentBadge: {
-    borderWidth: 1, borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 2,
+    borderWidth: 1, borderRadius: radii.full, paddingHorizontal: sp[2], paddingVertical: sp[1],
   },
-  currentBadgeText: { fontFamily: fontFamilies.body, fontSize: 10 },
+  currentBadgeText: { fontFamily: fontFamilies.body, fontSize: typeScale.xs, fontWeight: fontWeights.medium },
 
   // Export
   sectionDesc: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
-  exportRow: { flexDirection: 'row', gap: 10 },
+  exportRow: { flexDirection: 'row', gap: sp[3] },
   exportBtn: {
-    flex: 1, minHeight: 44, borderRadius: radii.md, borderWidth: 1,
+    flex: 1, minHeight: touchMinHeight, borderRadius: radii.md, borderWidth: 1,
     borderColor: colors.brandAccent, backgroundColor: colors.accentTint,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: sp[2],
   },
-  exportBtnText: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
+  exportBtnText: { color: colors.brandAccent, fontFamily: fontFamilies.heading, fontSize: typeScale.sm, fontWeight: fontWeights.semibold },
   exportingLabel: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, textAlign: 'center' },
 
   // Coming soon
   comingSoon: {
     borderWidth: 1, borderColor: colors.warning, borderRadius: radii.full,
-    paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start',
-    backgroundColor: 'rgba(245,158,11,0.10)',
+    paddingHorizontal: sp[2], paddingVertical: sp[1], alignSelf: 'flex-start',
+    backgroundColor: colors.warningBannerBg,
   },
-  comingSoonText: { color: colors.warning, fontFamily: fontFamilies.body, fontSize: 10 },
+  comingSoonText: { color: colors.warning, fontFamily: fontFamilies.body, fontSize: typeScale.xs, fontWeight: fontWeights.medium },
+
+  // Upgrade info modal
+  upgradeModalPriceBadge: {
+    borderWidth: 1, borderRadius: radii.lg, padding: sp[4],
+    alignItems: 'center' as const, backgroundColor: colors.surface,
+  },
+  upgradeModalTierName: { fontFamily: fontFamilies.heading, fontSize: typeScale.xl, fontWeight: fontWeights.bold, marginBottom: sp[1] },
+  upgradeModalPrice: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm },
+  upgradeModalFeatures: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg,
+    backgroundColor: colors.surface, paddingHorizontal: sp[4], paddingVertical: sp[1],
+  },
+  upgradeModalNote: {
+    flexDirection: 'row' as const, gap: sp[2], alignItems: 'flex-start' as const,
+    padding: sp[4], borderRadius: radii.md,
+    backgroundColor: colors.warningBannerBg, borderWidth: 1, borderColor: colors.warning,
+  },
+  upgradeModalNoteText: {
+    flex: 1, color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm,
+  },
+  upgradeModalContactBtn: {
+    minHeight: touchMinHeight, borderRadius: radii.md, borderWidth: 1,
+    flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'center' as const, gap: sp[2],
+  },
+  upgradeModalContactBtnText: { fontFamily: fontFamilies.heading, fontSize: typeScale.sm, fontWeight: fontWeights.semibold },
 
   // Integrations
   integrationCard: {
-    flexDirection: 'row', gap: 12, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radii.lg, backgroundColor: colors.surface, padding: 14, alignItems: 'flex-start',
+    flexDirection: 'row', gap: sp[3], borderWidth: 1, borderColor: colors.border,
+    borderRadius: radii.lg, backgroundColor: colors.surface, padding: sp[4], alignItems: 'center',
   },
   integrationIcon: {
-    width: 44, height: 44, borderRadius: radii.md, borderWidth: 1,
+    width: touchMinHeight, height: touchMinHeight, borderRadius: radii.md, borderWidth: 1,
     borderColor: colors.border, backgroundColor: colors.surfaceAlt,
     justifyContent: 'center', alignItems: 'center',
   },
-  integrationTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm },
-  integrationDesc: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: 3 },
+  integrationHeaderRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: sp[2],
+  },
+  integrationTitle: { color: colors.textPrimary, fontFamily: fontFamilies.heading, fontSize: typeScale.sm, fontWeight: fontWeights.semibold },
+  integrationDesc: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, marginTop: sp[1] },
+
+  // Integration status badges
+  intgStatusBadge: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: radii.full,
+    paddingHorizontal: sp[2], paddingVertical: sp[1], backgroundColor: colors.surfaceAlt,
+  },
+  intgStatusBadgeOk: { borderColor: colors.success, backgroundColor: colors.successBannerBg },
+  intgStatusText: { color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.xs, fontWeight: fontWeights.medium },
+  intgStatusTextOk: { color: colors.success },
+
+  // Integration detail modal
+  intgModalIconWrap: {
+    width: 72, height: 72, borderRadius: radii.lg, borderWidth: 1,
+    borderColor: colors.border, backgroundColor: colors.surfaceAlt,
+    justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: sp[1],
+  },
+  intgModalContent: {
+    color: colors.textSecondary, fontFamily: fontFamilies.body, fontSize: typeScale.sm,
+    lineHeight: typeScale.sm * 1.5,
+  },
+  intgModalActions: { gap: sp[3], marginTop: sp[2] },
 });
 }
