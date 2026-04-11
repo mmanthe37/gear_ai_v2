@@ -320,7 +320,7 @@ export default function ChatScreen() {
     setIsLoadingHistory(true);
     try {
       const fetched = isManualThread
-        ? await getUserChatSessions(userId, true)
+        ? await getUserChatSessions(userId, 20, true)
         : await getVehicleChatSessions(routeId, userId);
       setSessions(fetched);
     } catch (e) {
