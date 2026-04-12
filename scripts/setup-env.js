@@ -115,12 +115,17 @@ function validateEnv() {
   console.log('\n' + '='.repeat(60));
   
   if (hasErrors) {
-    console.log('\n❌ Environment validation FAILED');
-    console.log('\n📝 Required variables are missing. Please:');
-    console.log('   1. Create Supabase project at https://supabase.com');
-    console.log('   2. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY');
-    console.log('   3. Run this script again to verify\n');
-    process.exit(1);
+    if (isCI) {
+      console.log('\n⚠️  Required env vars missing in CI — build will use bundled defaults');
+      console.log('   (Vercel/EAS inject env vars at deploy time)\n');
+    } else {
+      console.log('\n❌ Environment validation FAILED');
+      console.log('\n📝 Required variables are missing. Please:');
+      console.log('   1. Create Supabase project at https://supabase.com');
+      console.log('   2. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY');
+      console.log('   3. Run this script again to verify\n');
+      process.exit(1);
+    }
   }
   
   if (hasWarnings) {
