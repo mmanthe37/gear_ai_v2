@@ -27,7 +27,7 @@ export interface ServiceStatus {
  */
 async function checkDatabase(): Promise<ServiceStatus> {
   try {
-    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
     if (!SUPABASE_URL) {
       return { status: 'unknown', message: 'SUPABASE_URL not configured' };
     }
@@ -36,7 +36,7 @@ async function checkDatabase(): Promise<ServiceStatus> {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
       method: 'HEAD',
       headers: {
-        'apikey': process.env.SUPABASE_ANON_KEY || '',
+        'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '',
       },
     });
     const responseTime = Date.now() - start;
@@ -84,7 +84,7 @@ async function checkAuth(): Promise<ServiceStatus> {
  */
 async function checkStorage(): Promise<ServiceStatus> {
   try {
-    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
     if (!SUPABASE_URL) {
       return { status: 'unknown', message: 'SUPABASE_URL not configured' };
     }
@@ -93,7 +93,7 @@ async function checkStorage(): Promise<ServiceStatus> {
     const response = await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
       method: 'GET',
       headers: {
-        'apikey': process.env.SUPABASE_ANON_KEY || '',
+        'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '',
       },
     });
     const responseTime = Date.now() - start;

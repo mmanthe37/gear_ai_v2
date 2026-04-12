@@ -1,7 +1,8 @@
 /**
  * Gear AI CoPilot - Supabase Client Configuration
- * 
- * Initializes Supabase client for database operations
+ *
+ * Initializes Supabase client for database operations.
+ * Guards against missing env vars to prevent module-level crashes.
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -19,10 +20,16 @@ const supabaseAnonKey =
   Constants.expoConfig?.extra?.supabaseAnonKey ||
   '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('[Supabase] MISSING config — URL:', supabaseUrl || '(empty)', '| Key:', supabaseAnonKey ? supabaseAnonKey.slice(0, 20) + '...' : '(empty)');
-} else {
-  console.log('[Supabase] OK — URL:', supabaseUrl, '| Key starts with:', supabaseAnonKey.slice(0, 10) + '...');
+/** True when both URL and anon key are present at build time. */
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+if (!isSupabaseConfigured) {
+  console.error(
+    '[Supabase] MISSING config — URL:',
+    supabaseUrl || '(empty)',
+    '| Key:',
+    supabaseAnonKey ? supabaseAnonKey.slice(0, 20) + '...' : '(empty)',
+  );
 }
 
 /**
@@ -47,24 +54,40 @@ function webSafeLock<R>(name: string, _acquireTimeout: number, fn: () => Promise
   return chain;
 }
 
-// Create Supabase client
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-    storage: AsyncStorage,
-    lock: webSafeLock,
-  },
-  global: {
-    // Fail fast — don't hang on network issues
-    fetch: (url, options) => {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
-      return fetch(url, { ...options, signal: controller.signal })
-        .finally(() => clearTimeout(timeout));
-    },
-  },
-});
+// Only call createClient when config is present — empty strings throw.
+let _client: SupabaseClient | null = null;
+if (isSupabaseConfigured) {
+  try {
+    _client = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+        storage: AsyncStorage,
+        lock: webSafeLock,
+      },
+      global: {
+        fetch: (url, options) => {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 15000);
+          return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+            clearTimeout(timeout),
+          );
+        },
+      },
+    });
+  } catch (e) {
+    console.error('[Supabase] createClient failed:', e);
+  }
+}
+
+/**
+ * The Supabase client instance.
+ *
+ * When `isSupabaseConfigured` is false this is `null` cast to SupabaseClient
+ * for backward-compatible typing. AuthContext gates all UI so services are
+ * never reached when the backend is unavailable.
+ */
+export const supabase: SupabaseClient = _client as unknown as SupabaseClient;
 
 export default supabase;

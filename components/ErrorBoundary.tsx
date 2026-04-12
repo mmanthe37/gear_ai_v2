@@ -70,11 +70,13 @@ class ErrorBoundary extends Component<Props, State> {
               We've encountered an unexpected error. Don't worry, your data is safe.
             </Text>
             
-            {__DEV__ && this.state.error && (
+            {this.state.error && (
               <View style={styles.errorDetails}>
-                <Text style={styles.errorTitle}>Error Details (Dev Mode):</Text>
+                <Text style={styles.errorTitle}>
+                  {__DEV__ ? 'Error Details (Dev Mode):' : 'Error Reference:'}
+                </Text>
                 <Text style={styles.errorMessage}>{this.state.error.toString()}</Text>
-                {this.state.errorInfo && (
+                {__DEV__ && this.state.errorInfo && (
                   <Text style={styles.stackTrace}>
                     {this.state.errorInfo.componentStack}
                   </Text>

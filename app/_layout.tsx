@@ -3,11 +3,22 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import GearLogo from '../components/branding/GearLogo';
+import BackendStatus from '../components/BackendStatus';
 import ErrorBoundary from '../components/ErrorBoundary';
-import { AuthProvider } from '../contexts/AuthContext';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { AppShellProvider } from '../contexts/AppShellContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { sp } from '../theme/spacing';
+
+function AppGate({ children }: { children: React.ReactNode }) {
+  const { backendStatus, retryConnection } = useAuth();
+
+  if (backendStatus === 'misconfigured' || backendStatus === 'unreachable') {
+    return <BackendStatus issue={backendStatus} onRetry={retryConnection} />;
+  }
+
+  return <>{children}</>;
+}
 
 function RootLayoutInner() {
   const { theme, colors } = useTheme();
@@ -30,10 +41,12 @@ function RootLayoutInner() {
 
   return (
     <AuthProvider>
-      <AppShellProvider>
-        <StatusBar style={theme === 'light' ? 'dark' : 'light'} />
-        <Stack screenOptions={{ headerShown: false }} />
-      </AppShellProvider>
+      <AppGate>
+        <AppShellProvider>
+          <StatusBar style={theme === 'light' ? 'dark' : 'light'} />
+          <Stack screenOptions={{ headerShown: false }} />
+        </AppShellProvider>
+      </AppGate>
     </AuthProvider>
   );
 }

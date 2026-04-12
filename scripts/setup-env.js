@@ -10,26 +10,15 @@ const fs = require('fs');
 const path = require('path');
 
 const REQUIRED_VARS = {
-  firebase: [
-    'FIREBASE_API_KEY',
-    'FIREBASE_AUTH_DOMAIN',
-    'FIREBASE_PROJECT_ID',
-  ],
   supabase: [
-    'SUPABASE_URL',
-    'SUPABASE_ANON_KEY',
+    'EXPO_PUBLIC_SUPABASE_URL',
+    'EXPO_PUBLIC_SUPABASE_ANON_KEY',
   ],
 };
 
 const OPTIONAL_VARS = {
-  firebase_full: [
-    'FIREBASE_STORAGE_BUCKET',
-    'FIREBASE_MESSAGING_SENDER_ID',
-    'FIREBASE_APP_ID',
-    'FIREBASE_MEASUREMENT_ID',
-  ],
-  supabase_full: [
-    'SUPABASE_SERVICE_KEY',
+  supabase_admin: [
+    'SUPABASE_SERVICE_ROLE_KEY',
   ],
   ai: [
     'OPENAI_API_KEY',
@@ -79,13 +68,15 @@ function loadEnvFile() {
 }
 
 function validateEnv() {
+  const isCI = process.argv.includes('--ci');
   console.log('🔍 Validating environment configuration...\n');
   
-  if (!checkEnvFile()) {
-    process.exit(1);
-  }
+  // In CI mode, check process.env directly (no .env.local file needed)
+  const env = isCI ? process.env : (() => {
+    if (!checkEnvFile()) process.exit(1);
+    return loadEnvFile();
+  })();
   
-  const env = loadEnvFile();
   let hasErrors = false;
   let hasWarnings = false;
   
@@ -126,10 +117,9 @@ function validateEnv() {
   if (hasErrors) {
     console.log('\n❌ Environment validation FAILED');
     console.log('\n📝 Required variables are missing. Please:');
-    console.log('   1. Create Firebase project at https://console.firebase.google.com');
-    console.log('   2. Create Supabase project at https://supabase.com');
-    console.log('   3. Update .env.local with your actual API keys');
-    console.log('   4. Run this script again to verify\n');
+    console.log('   1. Create Supabase project at https://supabase.com');
+    console.log('   2. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY');
+    console.log('   3. Run this script again to verify\n');
     process.exit(1);
   }
   

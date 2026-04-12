@@ -1,19 +1,25 @@
 /**
  * Gear AI CoPilot - Authentication Context
  * 
- * Manages global authentication state using Supabase Auth
+ * Manages global authentication state using Supabase Auth.
+ * Also tracks backend availability so the UI can gate on it.
  */
 
 import React, { createContext, useCallback, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { User, AuthCredentials, SignUpData } from '../types/user';
 import * as authService from '../services/auth-service';
+import type { BackendIssue } from '../components/BackendStatus';
+
+type BackendStatus = 'checking' | 'ok' | BackendIssue;
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  backendStatus: BackendStatus;
+  retryConnection: () => void;
   signIn: (credentials: AuthCredentials) => Promise<void>;
   signUp: (signUpData: SignUpData) => Promise<void>;
   signOut: () => Promise<void>;
@@ -33,10 +39,27 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+/** Returns true when the error looks like a network / DNS failure. */
+function isNetworkError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return (
+    msg.includes('network') ||
+    msg.includes('fetch') ||
+    msg.includes('abort') ||
+    msg.includes('timeout') ||
+    msg.includes('failed to fetch') ||
+    msg.includes('could not resolve')
+  );
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>(
+    isSupabaseConfigured ? 'checking' : 'misconfigured',
+  );
 
   const resolveUserFromSession = useCallback(async (authUser: SupabaseUser): Promise<User> => {
     try {
@@ -48,16 +71,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  useEffect(() => {
+  const bootstrap = useCallback(() => {
+    if (!isSupabaseConfigured) {
+      setBackendStatus('misconfigured');
+      setLoading(false);
+      return () => {};
+    }
+
+    setBackendStatus('checking');
+    setLoading(true);
+
     // Safety timeout — never let the app hang on the loading screen
     const safetyTimeout = setTimeout(() => {
       console.warn('[Auth] Safety timeout reached — forcing loading to false');
+      setBackendStatus((prev) => (prev === 'checking' ? 'unreachable' : prev));
       setLoading(false);
     }, 10_000);
 
     // Get initial session with full error handling
     supabase.auth.getSession()
       .then(async ({ data: { session: s } }) => {
+        setBackendStatus('ok');
         setSession(s);
         if (s?.user) {
           const profile = await resolveUserFromSession(s.user);
@@ -68,7 +102,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
       .catch((error) => {
         console.error('[Auth] getSession failed:', error);
-        // Clear any corrupted session state
+        setBackendStatus(isNetworkError(error) ? 'unreachable' : 'ok');
         setSession(null);
         setUser(null);
       })
@@ -85,9 +119,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const profile = await resolveUserFromSession(s.user);
           setUser(profile);
         } else {
-          // No session → genuinely signed out
           setUser(null);
         }
+        setBackendStatus('ok');
         setLoading(false);
       }
     );
@@ -97,6 +131,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       subscription.unsubscribe();
     };
   }, [resolveUserFromSession]);
+
+  useEffect(() => {
+    return bootstrap();
+  }, [bootstrap]);
+
+  const retryConnection = useCallback(() => {
+    bootstrap();
+  }, [bootstrap]);
 
   const handleSignIn = async (credentials: AuthCredentials) => {
     try {
@@ -142,6 +184,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     session,
     loading,
+    backendStatus,
+    retryConnection,
     signIn: handleSignIn,
     signUp: handleSignUp,
     signOut: handleSignOut,
