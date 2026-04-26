@@ -8,18 +8,12 @@
 // Define required environment variables by context
 const REQUIRED_VARS = {
   development: [
-    'FIREBASE_API_KEY',
-    'FIREBASE_AUTH_DOMAIN',
-    'FIREBASE_PROJECT_ID',
-    'SUPABASE_URL',
-    'SUPABASE_ANON_KEY',
+    'EXPO_PUBLIC_SUPABASE_URL',
+    'EXPO_PUBLIC_SUPABASE_ANON_KEY',
   ],
   production: [
-    'FIREBASE_API_KEY',
-    'FIREBASE_AUTH_DOMAIN',
-    'FIREBASE_PROJECT_ID',
-    'SUPABASE_URL',
-    'SUPABASE_ANON_KEY',
+    'EXPO_PUBLIC_SUPABASE_URL',
+    'EXPO_PUBLIC_SUPABASE_ANON_KEY',
     'NODE_ENV',
   ],
 };
@@ -27,7 +21,9 @@ const REQUIRED_VARS = {
 // Optional but recommended variables
 const RECOMMENDED_VARS = [
   'OPENAI_API_KEY',
+  'ANTHROPIC_API_KEY',
   'STRIPE_PUBLISHABLE_KEY',
+  'ALLOWED_ORIGINS',
   'SENTRY_DSN',
 ];
 

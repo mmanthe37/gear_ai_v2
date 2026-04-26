@@ -139,7 +139,19 @@ function httpsPost(options, body) {
 // ---------------------------------------------------------------------------
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const configuredOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  const allowedOrigins = configuredOrigins.length > 0
+    ? configuredOrigins
+    : ['http://localhost:8081', 'http://localhost:19006', 'http://localhost:3000'];
+
+  const requestOrigin = req.headers.origin;
+  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
