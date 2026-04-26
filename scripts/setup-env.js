@@ -22,6 +22,7 @@ const OPTIONAL_VARS = {
   ],
   ai: [
     'OPENAI_API_KEY',
+    'ANTHROPIC_API_KEY',
   ],
   payments: [
     'STRIPE_PUBLISHABLE_KEY',
