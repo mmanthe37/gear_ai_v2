@@ -16,7 +16,6 @@ const REQUIRED_VARS = {
   production: [
     ['EXPO_PUBLIC_SUPABASE_URL', 'SUPABASE_URL'],
     ['EXPO_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY'],
-    'NODE_ENV',
   ],
 };
 

@@ -152,7 +152,7 @@ Quick Start:
      cp .env.example .env.local
 
   2. Edit .env.local with your credentials:
-     - Supabase URL and anon key (required)
+     - EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY (required)
      - OpenAI / Anthropic API keys (optional, for AI features)
      - Stripe keys (optional, for payments)
      - ALLOWED_ORIGINS (optional, comma-separated list for API CORS)
