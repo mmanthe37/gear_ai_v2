@@ -186,7 +186,7 @@ jobs:
           working-directory: ./
 
       - name: Smoke test health endpoint
-        if: env.PRODUCTION_URL != ''
+        if: ${{ secrets.PRODUCTION_URL != '' }}
         env:
           PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
         run: |
