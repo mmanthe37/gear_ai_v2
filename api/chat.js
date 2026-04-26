@@ -145,7 +145,7 @@ module.exports = async function handler(req, res) {
     .filter(Boolean);
   const allowedOrigins = configuredOrigins.length > 0
     ? configuredOrigins
-    : ['http://localhost:8081', 'http://localhost:19006', 'http://localhost:3000'];
+    : (process.env.NODE_ENV === 'production' ? [] : ['http://localhost:8081', 'http://localhost:19006', 'http://localhost:3000']);
 
   const requestOrigin = req.headers.origin;
   if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
