@@ -5,15 +5,17 @@
  * Checks if required environment variables are set
  */
 
-// Define required environment variables by context
+// Define required environment variables by context.
+// Each entry may be a string (single var) or an array of strings (any one is acceptable,
+// matching the fallback logic in app.config.js).
 const REQUIRED_VARS = {
   development: [
-    'EXPO_PUBLIC_SUPABASE_URL',
-    'EXPO_PUBLIC_SUPABASE_ANON_KEY',
+    ['EXPO_PUBLIC_SUPABASE_URL', 'SUPABASE_URL'],
+    ['EXPO_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY'],
   ],
   production: [
-    'EXPO_PUBLIC_SUPABASE_URL',
-    'EXPO_PUBLIC_SUPABASE_ANON_KEY',
+    ['EXPO_PUBLIC_SUPABASE_URL', 'SUPABASE_URL'],
+    ['EXPO_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY'],
     'NODE_ENV',
   ],
 };
@@ -41,14 +43,17 @@ function validateEnvironment(env = 'development') {
   const missing = [];
   const present = [];
 
-  // Check required variables
-  required.forEach((varName) => {
-    if (process.env[varName]) {
-      present.push(varName);
-      console.log('✓', varName);
+  // Check required variables (entries may be a string or an array of accepted aliases)
+  required.forEach((entry) => {
+    const aliases = Array.isArray(entry) ? entry : [entry];
+    const found = aliases.find((name) => process.env[name]);
+    if (found) {
+      present.push(found);
+      console.log('✓', found, aliases.length > 1 ? `(alias: ${aliases.join(' | ')})` : '');
     } else {
-      missing.push(varName);
-      console.log('✗', varName, '(REQUIRED)');
+      const primary = aliases[0];
+      missing.push(primary);
+      console.log('✗', aliases.join(' | '), '(REQUIRED)');
     }
   });
 
