@@ -178,7 +178,6 @@ jobs:
 
       - name: Deploy to Vercel Production
         uses: amondnet/vercel-action@v25
-        continue-on-error: true
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
@@ -186,10 +185,19 @@ jobs:
           vercel-args: "--prod"
           working-directory: ./
 
-      - name: Notify deployment
+      - name: Smoke test health endpoint
+        if: ${{ secrets.PRODUCTION_URL != '' }}
+        env:
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
         run: |
-          echo "🚀 Deployed to production!"
-          echo "URL: https://yourdomain.com"
+          echo "🔍 Running smoke test against $PRODUCTION_URL"
+          curl --retry 5 --retry-delay 15 --retry-connrefused \
+               --fail --silent --show-error \
+               "$PRODUCTION_URL/api/health"
+          echo "✅ Health check passed"
+
+      - name: Notify deployment
+        run: echo "🚀 Deployed to production!"
 
   # Job 6: Mobile Build Check (iOS)
   build-ios:
@@ -276,11 +284,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: web-build
           path: dist/
+
+      - name: Install serve and wait-on
+        run: npm install -g serve wait-on
+
+      - name: Serve build and wait for readiness
+        run: |
+          npx serve -s dist -l 8080 &
+          npx wait-on http://localhost:8080 --timeout 30000
 
       - name: Run Lighthouse CI
         uses: treosh/lighthouse-ci-action@v10

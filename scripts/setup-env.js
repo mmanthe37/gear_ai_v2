@@ -22,6 +22,7 @@ const OPTIONAL_VARS = {
   ],
   ai: [
     'OPENAI_API_KEY',
+    'ANTHROPIC_API_KEY',
   ],
   payments: [
     'STRIPE_PUBLISHABLE_KEY',
@@ -151,10 +152,10 @@ Quick Start:
      cp .env.example .env.local
 
   2. Edit .env.local with your credentials:
-     - Firebase API keys (required)
-     - Supabase URL and keys (required)
-     - OpenAI API key (optional, for AI features)
+     - EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY (required)
+     - OpenAI / Anthropic API keys (optional, for AI features)
      - Stripe keys (optional, for payments)
+     - ALLOWED_ORIGINS (optional, comma-separated list for API CORS)
 
   3. Run this script to validate:
      node scripts/setup-env.js
