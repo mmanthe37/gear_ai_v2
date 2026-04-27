@@ -1,7 +1,5 @@
 // Disable Vercel's default body parser so we can handle the
 // application/csp-report content-type that browsers send for CSP reports.
-module.exports.config = { api: { bodyParser: false } };
-
 module.exports = function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -23,3 +21,5 @@ module.exports = function handler(req, res) {
   });
   req.on('error', () => res.status(400).end());
 };
+
+module.exports.config = { api: { bodyParser: false } };
