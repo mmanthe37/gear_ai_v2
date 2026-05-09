@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Analytics } from '@vercel/analytics/react';
 import GearLogo from '../components/branding/GearLogo';
 import BackendStatus from '../components/BackendStatus';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -45,6 +46,7 @@ function RootLayoutInner() {
         <AppShellProvider>
           <StatusBar style={theme === 'light' ? 'dark' : 'light'} />
           <Stack screenOptions={{ headerShown: false }} />
+          <Analytics />
         </AppShellProvider>
       </AppGate>
     </AuthProvider>
